@@ -1,13 +1,15 @@
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white text-[#0f0f0f] scroll-smooth">
+    <div className="min-h-screen bg-white dark:bg-[#0f0f0f] text-[#0f0f0f] dark:text-white scroll-smooth transition-colors duration-300">
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between max-w-7xl mx-auto w-full">
         <div className="text-2xl font-bold tracking-tight">Redress</div>
-        <div className="flex items-center space-x-6">
-          <Link href="/login" className="text-sm font-medium hover:text-gray-600 transition-colors">
+        <div className="flex items-center space-x-4 md:space-x-6">
+          <ThemeToggle />
+          <Link href="/login" className="text-sm font-medium hover:text-gray-600 dark:hover:text-gray-400 transition-colors">
             Login
           </Link>
           <Link 
@@ -44,9 +46,9 @@ export default function Home() {
       </section>
 
       {/* How It Works Section */}
-      <section id="how-it-works" className="py-24 px-6 bg-gray-50">
+      <section id="how-it-works" className="py-24 px-6 bg-gray-50 dark:bg-[#0a0a0a] transition-colors duration-300">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-16">How it works</h2>
+          <h2 className="text-3xl font-bold text-center mb-16 dark:text-white">How it works</h2>
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
@@ -65,12 +67,12 @@ export default function Home() {
                 desc: "If ignored, escalate to the relevant regulator automatically."
               }
             ].map((item) => (
-              <div key={item.step} className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-                <div className="w-10 h-10 bg-[#1A1A2E] text-white rounded-full flex items-center justify-center font-bold">
+              <div key={item.step} className="bg-white dark:bg-[#0f0f0f] p-8 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4 transition-colors">
+                <div className="w-10 h-10 bg-[#1A1A2E] dark:bg-white text-white dark:text-[#1A1A2E] rounded-full flex items-center justify-center font-bold">
                   {item.step}
                 </div>
-                <h3 className="text-xl font-bold">{item.title}</h3>
-                <p className="text-gray-600">{item.desc}</p>
+                <h3 className="text-xl font-bold dark:text-white">{item.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -79,7 +81,7 @@ export default function Home() {
 
       {/* Who It's For Section */}
       <section className="py-24 px-6 max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-16">Who it's for</h2>
+        <h2 className="text-3xl font-bold text-center mb-16 dark:text-white">Who it's for</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
             "Banking & Finance",
@@ -91,29 +93,29 @@ export default function Home() {
           ].map((tag) => (
             <div 
               key={tag} 
-              className="px-4 py-6 text-center rounded-xl border border-gray-100 bg-white hover:border-[#1A1A2E] hover:shadow-md transition-all cursor-default"
+              className="px-4 py-6 text-center rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-[#0f0f0f] hover:border-[#1A1A2E] dark:hover:border-white hover:shadow-md transition-all cursor-default"
             >
-              <p className="text-sm font-semibold">{tag}</p>
+              <p className="text-sm font-semibold dark:text-gray-200">{tag}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-16 px-6 bg-white border-t border-gray-100">
+      <footer className="py-16 px-6 bg-white dark:bg-[#0f0f0f] border-t border-gray-100 dark:border-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12">
           <div className="space-y-4">
-            <div className="text-2xl font-bold tracking-tight">Redress</div>
-            <p className="text-gray-600 max-w-xs">
+            <div className="text-2xl font-bold tracking-tight dark:text-white">Redress</div>
+            <p className="text-gray-600 dark:text-gray-400 max-w-xs">
               AI-powered complaint resolution for everyone.
             </p>
           </div>
           <div className="flex flex-col md:items-end space-y-4">
-            <div className="flex space-x-6 text-sm font-medium">
-              <Link href="/login" className="hover:text-gray-600">Login</Link>
-              <Link href="/register" className="hover:text-gray-600">Register</Link>
+            <div className="flex space-x-6 text-sm font-medium dark:text-gray-300">
+              <Link href="/login" className="hover:text-gray-600 dark:hover:text-white">Login</Link>
+              <Link href="/register" className="hover:text-gray-600 dark:hover:text-white">Register</Link>
             </div>
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-gray-400 dark:text-gray-500">
               © 2026 Redress. AMD Developer Hackathon.
             </div>
           </div>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Home, User, LogOut } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function DashboardLayout({
   children,
@@ -47,8 +48,8 @@ export default function DashboardLayout({
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f0f]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black dark:border-white"></div>
       </div>
     );
   }
@@ -59,11 +60,12 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] flex transition-colors duration-300">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex flex-col w-60 bg-white border-r border-gray-100 fixed h-full">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold tracking-tight">Redress</h1>
+      <aside className="hidden md:flex flex-col w-60 bg-white dark:bg-[#0f0f0f] border-r border-gray-100 dark:border-gray-800 fixed h-full">
+        <div className="p-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight dark:text-white">Redress</h1>
+          <ThemeToggle />
         </div>
         
         <nav className="flex-1 px-4 space-y-1">
@@ -87,9 +89,9 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-100 space-y-4">
+        <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-4">
           <div className="flex items-center space-x-3 px-3">
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 overflow-hidden">
+            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400 overflow-hidden">
               {user?.avatar ? (
                 <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
               ) : (
@@ -97,13 +99,13 @@ export default function DashboardLayout({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-3 w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-all"
+            className="flex items-center space-x-3 w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
           >
             <LogOut size={18} />
             <span>Logout</span>
@@ -119,7 +121,7 @@ export default function DashboardLayout({
       </main>
 
       {/* Bottom Nav - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around items-center h-16 px-4 z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0f0f0f] border-t border-gray-100 dark:border-gray-800 flex justify-around items-center h-16 px-4 z-50 transition-colors">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -128,7 +130,7 @@ export default function DashboardLayout({
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center justify-center space-y-1 w-full h-full ${
-                isActive ? 'text-black' : 'text-gray-400'
+                isActive ? 'text-black dark:text-white' : 'text-gray-400 dark:text-gray-500'
               }`}
             >
               <Icon size={20} />
