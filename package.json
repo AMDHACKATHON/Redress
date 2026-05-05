@@ -1,5 +1,5 @@
 {
-  "name": "redress",
+  "name": "redress-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
