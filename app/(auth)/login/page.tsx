@@ -8,6 +8,7 @@ import { Shield, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { AuthResponse } from '@/types';
+import { MinimalFooter } from '@/components/MinimalFooter';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function LoginPage() {
 
       setUser(user);
       toast.success('Welcome back to Redress!');
-      router.push('/');
+      router.push('/dashboard');
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail ||
@@ -176,6 +177,9 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
+      </div>
+      <div className="mt-auto relative z-10">
+        <MinimalFooter />
       </div>
     </div>
   );

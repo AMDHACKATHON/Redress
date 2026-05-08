@@ -8,6 +8,7 @@ import { Shield, ArrowRight, Eye, EyeOff, Check, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { AuthResponse } from '@/types';
+import { MinimalFooter } from '@/components/MinimalFooter';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,14 +46,8 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      const { user, tokens } = response.data;
-
-      localStorage.setItem('redress_access_token', tokens.access);
-      localStorage.setItem('redress_refresh_token', tokens.refresh);
-
-      setUser(user);
-      toast.success('Account created successfully!');
-      router.push('/');
+      toast.success('Account created successfully! Please sign in.');
+      router.push('/login');
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail ||
@@ -260,6 +255,9 @@ export default function RegisterPage() {
             </div>
           </div>
         </div>
+      </div>
+      <div className="mt-auto relative z-10">
+        <MinimalFooter />
       </div>
     </div>
   );

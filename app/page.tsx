@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { MinimalFooter } from '@/components/MinimalFooter';
 import {
   Shield,
   FileText,
@@ -253,41 +254,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative py-12 px-6 border-t border-slate-100 dark:border-white/5">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between space-y-6 md:space-y-0">
-          <div className="flex items-center space-x-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Shield className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-bold tracking-tight">Redress</span>
-            <span className="text-xs text-slate-400 dark:text-slate-600 ml-2">
-              © 2026
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-6 text-sm font-medium text-slate-500 dark:text-slate-500">
-            <Link href="/login" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-              Login
-            </Link>
-            <Link href="/register" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-              Register
-            </Link>
-            <a
-              href="https://github.com/AMDHACKATHON/Redress"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              GitHub
-            </a>
-          </div>
-
-          <div className="text-xs text-slate-400 dark:text-slate-600">
-            AMD Developer Hackathon
-          </div>
-        </div>
-      </footer>
+      <MinimalFooter />
     </div>
   );
 }

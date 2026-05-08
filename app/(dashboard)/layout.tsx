@@ -7,6 +7,7 @@ import { Home, User, LogOut, Shield, Menu, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { MinimalFooter } from '@/components/MinimalFooter';
 
 export default function DashboardLayout({
   children,
@@ -72,7 +73,7 @@ export default function DashboardLayout({
   }
 
   const navItems = [
-    { label: 'Complaints', href: '/', icon: Home },
+    { label: 'Complaints', href: '/dashboard', icon: Home },
     { label: 'Profile', href: '/profile', icon: User },
   ];
 
@@ -89,7 +90,7 @@ export default function DashboardLayout({
         <div className="flex-1 glass-card rounded-2xl flex flex-col overflow-hidden">
           {/* Logo */}
           <div className="p-5 flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/dashboard" className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                 <Shield className="w-4 h-4 text-white" />
               </div>
@@ -159,7 +160,7 @@ export default function DashboardLayout({
         {/* Mobile Header */}
         <div className="md:hidden sticky top-0 z-40 px-4 py-3">
           <div className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/dashboard" className="flex items-center space-x-2">
               <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                 <Shield className="w-3.5 h-3.5 text-white" />
               </div>
@@ -181,8 +182,11 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto p-4 md:p-8">
-          {children}
+        <div className="max-w-5xl mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)] flex flex-col">
+          <div className="flex-1">
+            {children}
+          </div>
+          <MinimalFooter />
         </div>
       </main>
 
