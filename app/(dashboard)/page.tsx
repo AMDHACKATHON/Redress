@@ -19,7 +19,7 @@ export default function ComplaintsPage() {
 
   const fetchComplaints = async () => {
     try {
-      const response = await api.get<Complaint[]>('/complaints/');
+      const response = await api.get<Complaint[]>('/complaints');
       setComplaints(response.data);
     } catch (error) {
       toast.error('Failed to load complaints');
@@ -31,7 +31,7 @@ export default function ComplaintsPage() {
   const startNewComplaint = async () => {
     setCreating(true);
     try {
-      const response = await api.post<{ complaint_id: string }>('/complaints/start/');
+      const response = await api.post<{ complaint_id: string }>('/complaints/start');
       router.push(`/complaint/${response.complaint_id}`);
     } catch (error) {
       toast.error('Failed to start new complaint');

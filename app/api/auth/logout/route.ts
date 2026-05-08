@@ -1,17 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import api from '@/lib/api';
+import { NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const token = req.headers.get('Authorization');
-    const response = await api.post('/auth/logout/', body, {
-      headers: { Authorization: token ?? '' }
-    });
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
-  }
+export async function POST() {
+  // Client-side logout handles token removal from localStorage.
+  // This endpoint exists for completeness — could be extended 
+  // for token blacklisting if needed.
+  return NextResponse.json({ message: 'Logged out successfully' });
 }

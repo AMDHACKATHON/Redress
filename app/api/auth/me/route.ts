@@ -1,16 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import api from '@/lib/api';
+import { connectDB } from '@/lib/mongodb';
+import User from '@/lib/models/User';
+import { getAuthUser } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get('Authorization');
-    const response = await api.get('/auth/me/', {
-      headers: { Authorization: token ?? '' }
+    const authHeader = req.headers.get('Authorization');
+    const payload = await getAuthUser(authHeader);
+
+    if (!payload) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+
+    const user = await User.findById(payload.userId).select('-password');
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      country: user.country,
+      complaint_count: user.complaintCount,
+      created_at: user.createdAt,
     });
-    return NextResponse.json(response.data, { status: response.status });
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
+    console.error('Auth/me error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch user' },
+      { status: 500 }
+    );
   }
 }
