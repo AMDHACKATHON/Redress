@@ -5,6 +5,7 @@
 **Backend:** Python, Django REST Framework  
 **Auth:** JWT via `djangorestframework-simplejwt`  
 **Team:** SAMKIEL | AMD Developer Hackathon 2026  
+**Repository:** [AMDHACKATHON/Redress](https://github.com/AMDHACKATHON/Redress)  
 
 ---
 

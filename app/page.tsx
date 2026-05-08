@@ -114,6 +114,14 @@ export default function Home() {
             <div className="flex space-x-6 text-sm font-medium dark:text-gray-300">
               <Link href="/login" className="hover:text-gray-600 dark:hover:text-white">Login</Link>
               <Link href="/register" className="hover:text-gray-600 dark:hover:text-white">Register</Link>
+              <a 
+                href="https://github.com/AMDHACKATHON/Redress" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:text-gray-600 dark:hover:text-white"
+              >
+                GitHub
+              </a>
             </div>
             <div className="text-sm text-gray-400 dark:text-gray-500">
               © 2026 Redress. AMD Developer Hackathon.
