@@ -47,7 +47,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050509] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+    <div className="min-h-screen bg-white dark:bg-[#0a0f1e] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Ambient background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-indigo-500/[0.06] to-purple-600/[0.06] blur-3xl animate-pulse-glow" />
@@ -160,7 +160,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-slate-200 dark:border-white/10" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-white/60 dark:bg-[#0c0c14]/60 text-slate-400 dark:text-slate-600 backdrop-blur-sm rounded-full">
+                <span className="px-3 bg-white/60 dark:bg-[#0d1220]/60 text-slate-400 dark:text-slate-600 backdrop-blur-sm rounded-full">
                   New to Redress?
                 </span>
               </div>

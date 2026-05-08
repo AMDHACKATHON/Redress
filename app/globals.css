@@ -18,13 +18,13 @@
   --color-surface-0: #ffffff;
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
-  --color-surface-800: #0c0c14;
-  --color-surface-900: #08080f;
-  --color-surface-950: #050509;
+  --color-surface-800: #111827;
+  --color-surface-900: #0d1220;
+  --color-surface-950: #0a0f1e;
 
   /* Glass opacity tokens */
   --color-glass-light: rgba(255, 255, 255, 0.6);
-  --color-glass-dark: rgba(12, 12, 20, 0.7);
+  --color-glass-dark: rgba(13, 18, 32, 0.75);
   --color-glass-border-light: rgba(255, 255, 255, 0.2);
   --color-glass-border-dark: rgba(255, 255, 255, 0.06);
 

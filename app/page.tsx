@@ -54,7 +54,7 @@ const stats = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050509] text-slate-900 dark:text-slate-100 scroll-smooth transition-colors duration-300">
+    <div className="min-h-screen bg-white dark:bg-[#0a0f1e] text-slate-900 dark:text-slate-100 scroll-smooth transition-colors duration-300">
       {/* Ambient Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-indigo-500/[0.07] to-purple-600/[0.07] blur-3xl animate-pulse-glow" />

@@ -49,7 +49,7 @@ export default function DashboardLayout({
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050509]">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0f1e]">
         <div className="flex flex-col items-center space-y-4">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center animate-pulse">
             <Shield className="w-5 h-5 text-white" />
@@ -77,7 +77,7 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-[#050509] flex transition-colors duration-300 relative">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-[#0a0f1e] flex transition-colors duration-300 relative">
       {/* Background ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/3 -left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-indigo-500/[0.03] to-purple-600/[0.03] blur-3xl" />
