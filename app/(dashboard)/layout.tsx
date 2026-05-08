@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, User, LogOut } from 'lucide-react';
+import { Home, User, LogOut, Shield, Menu, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -17,11 +17,12 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { user, setUser, logout } = useStore();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('redress_access_token');
-      
+
       if (!token) {
         router.push('/login');
         return;
@@ -48,8 +49,24 @@ export default function DashboardLayout({
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0f0f0f]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black dark:border-white"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050509]">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center animate-pulse">
+            <Shield className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex space-x-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-indigo-500/60"
+                style={{
+                  animation: 'pulse-glow 1.4s ease-in-out infinite',
+                  animationDelay: `${i * 0.2}s`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -60,15 +77,118 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] flex transition-colors duration-300">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-[#050509] flex transition-colors duration-300 relative">
+      {/* Background ambient */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-1/3 -left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-indigo-500/[0.03] to-purple-600/[0.03] blur-3xl" />
+        <div className="absolute inset-0 bg-grid opacity-20" />
+      </div>
+
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex flex-col w-60 bg-white dark:bg-[#0f0f0f] border-r border-gray-100 dark:border-gray-800 fixed h-full">
-        <div className="p-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight dark:text-white">Redress</h1>
-          <ThemeToggle />
+      <aside className="hidden md:flex flex-col w-64 fixed h-full z-40 p-3">
+        <div className="flex-1 glass-card rounded-2xl flex flex-col overflow-hidden">
+          {/* Logo */}
+          <div className="p-5 flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-lg font-bold tracking-tight">Redress</span>
+            </Link>
+            <ThemeToggle />
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-2 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* User section */}
+          <div className="p-3 border-t border-slate-200/50 dark:border-white/5 space-y-2">
+            <div className="flex items-center space-x-3 px-3 py-2">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 overflow-hidden shrink-0">
+                {user?.avatar ? (
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  user?.name?.charAt(0)?.toUpperCase() || 'U'
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">
+                  {user?.name}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-500 truncate">
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-3 w-full px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+            >
+              <LogOut size={16} />
+              <span>Logout</span>
+            </button>
+          </div>
         </div>
-        
-        <nav className="flex-1 px-4 space-y-1">
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 md:ml-64 pb-20 md:pb-0 relative z-10">
+        {/* Mobile Header */}
+        <div className="md:hidden sticky top-0 z-40 px-4 py-3">
+          <div className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span className="font-bold text-sm">Redress</span>
+            </Link>
+            <div className="flex items-center space-x-2">
+              <ThemeToggle />
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-white/5"
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-4 h-4" />
+                ) : (
+                  <Menu className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-5xl mx-auto p-4 md:p-8">
+          {children}
+        </div>
+      </main>
+
+      {/* Bottom Nav - Mobile */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
+        <div className="glass-card rounded-2xl flex justify-around items-center h-16 px-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -76,68 +196,20 @@ export default function DashboardLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive 
-                    ? 'bg-black text-white' 
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-black'
+                className={`flex flex-col items-center justify-center space-y-1 w-full h-full rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? 'text-indigo-500'
+                    : 'text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400'
                 }`}
               >
-                <Icon size={18} />
-                <span>{item.label}</span>
+                <div className={`p-1.5 rounded-lg transition-colors ${isActive ? 'bg-indigo-500/10' : ''}`}>
+                  <Icon size={20} />
+                </div>
+                <span className="text-[10px] font-semibold">{item.label}</span>
               </Link>
             );
           })}
-        </nav>
-
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800 space-y-4">
-          <div className="flex items-center space-x-3 px-3">
-            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400 overflow-hidden">
-              {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
-              ) : (
-                user?.name?.charAt(0) || 'U'
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center space-x-3 w-full px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-          >
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
         </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 md:ml-60 pb-20 md:pb-0">
-        <div className="max-w-5xl mx-auto p-4 md:p-8">
-          {children}
-        </div>
-      </main>
-
-      {/* Bottom Nav - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#0f0f0f] border-t border-gray-100 dark:border-gray-800 flex justify-around items-center h-16 px-4 z-50 transition-colors">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-col items-center justify-center space-y-1 w-full h-full ${
-                isActive ? 'text-black dark:text-white' : 'text-gray-400 dark:text-gray-500'
-              }`}
-            >
-              <Icon size={20} />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
       </nav>
     </div>
   );

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { Shield, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { AuthResponse } from '@/types';
@@ -11,7 +12,8 @@ import { AuthResponse } from '@/types';
 export default function LoginPage() {
   const router = useRouter();
   const { setUser, setLoading, isLoading } = useStore();
-  
+  const [showPassword, setShowPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -34,7 +36,10 @@ export default function LoginPage() {
       toast.success('Welcome back to Redress!');
       router.push('/');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Login failed. Please check your credentials.';
+      const errorMessage =
+        err.response?.data?.detail ||
+        err.response?.data?.error ||
+        'Login failed. Please check your credentials.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -42,91 +47,129 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 className="text-center text-4xl font-extrabold text-gray-900 tracking-tight">
-          Redress
+    <div className="min-h-screen bg-white dark:bg-[#050509] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Ambient background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-indigo-500/[0.06] to-purple-600/[0.06] blur-3xl animate-pulse-glow" />
+        <div className="absolute inset-0 bg-grid opacity-30" />
+      </div>
+
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        {/* Logo */}
+        <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <Shield className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-2xl font-bold tracking-tight">Redress</span>
+        </Link>
+
+        <h1 className="text-center text-2xl font-bold tracking-tight mb-1">
+          Welcome back
         </h1>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Resolve any complaint, anywhere.
+        <p className="text-center text-sm text-slate-500 dark:text-slate-500">
+          Sign in to continue resolving complaints
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 border border-gray-100 sm:rounded-xl sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="glass-card rounded-2xl py-8 px-6 sm:px-10 shadow-xl shadow-black/5 dark:shadow-black/30">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="login-email"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
+              >
                 Email address
               </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm transition-all"
-                />
-              </div>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="input-premium w-full"
+                placeholder="you@example.com"
+              />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="login-password"
+                className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5"
+              >
                 Password
               </label>
-              <div className="mt-1">
+              <div className="relative">
                 <input
-                  id="password"
+                  id="login-password"
                   name="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   required
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-black focus:border-black sm:text-sm transition-all"
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  className="input-premium w-full pr-10"
+                  placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
               </div>
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md border border-red-100">
-                {error}
+              <div className="text-red-400 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20 flex items-start space-x-2">
+                <div className="w-1 h-1 rounded-full bg-red-400 mt-1.5 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {isLoading ? (
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  'Sign in'
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn-primary w-full flex items-center justify-center space-x-2"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Sign in</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
           </form>
 
-          <div className="mt-6">
+          <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
+                <div className="w-full border-t border-slate-200 dark:border-white/10" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">New to Redress?</span>
+                <span className="px-3 bg-white/60 dark:bg-[#0c0c14]/60 text-slate-400 dark:text-slate-600 backdrop-blur-sm rounded-full">
+                  New to Redress?
+                </span>
               </div>
             </div>
 
             <div className="mt-6">
               <Link
                 href="/register"
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black"
+                className="btn-secondary w-full flex items-center justify-center"
               >
                 Create an account
               </Link>
