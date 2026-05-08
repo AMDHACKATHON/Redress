@@ -29,7 +29,7 @@ export default function DashboardLayout({
       }
 
       try {
-        const response = await api.get('/auth/me');
+        const response = await api.get('auth/me');
         setUser(response.data);
         setIsCheckingAuth(false);
       } catch (error) {
