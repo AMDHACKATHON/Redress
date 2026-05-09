@@ -43,3 +43,5 @@ next-env.d.ts
 # fwesh's npm logs
 npm-diagnostics.txt
 npm-install.log
+# preview pages (temporary for testing only)
+/app/preview
