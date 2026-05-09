@@ -10,6 +10,8 @@ import { useStore } from '@/lib/store';
 import { MinimalFooter } from '@/components/MinimalFooter';
 import Loader from '@/components/Loader';
 
+const ADMIN_EMAIL = 'hello@samkiel.dev';
+
 export default function DashboardLayout({
   children,
 }: {
@@ -20,6 +22,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { user, setUser, logout } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isAdmin = session?.user?.email === ADMIN_EMAIL;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -119,6 +123,21 @@ export default function DashboardLayout({
                 </p>
               </div>
             </div>
+            
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  pathname === '/admin'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20'
+                    : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10'
+                }`}
+              >
+                <Shield size={18} />
+                <span>Admin Panel</span>
+              </Link>
+            )}
+
             <button
               onClick={handleLogout}
               className="flex items-center space-x-3 w-full px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
@@ -172,6 +191,17 @@ export default function DashboardLayout({
                     <p className="text-sm text-slate-400 truncate">{user?.email || session?.user?.email}</p>
                   </div>
                 </div>
+
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-center space-x-2 w-full p-4 text-sm font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all border border-indigo-500/10"
+                  >
+                    <Shield size={18} />
+                    <span>Admin Dashboard</span>
+                  </Link>
+                )}
                 
                 <button
                   onClick={handleLogout}
