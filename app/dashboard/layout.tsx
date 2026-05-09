@@ -39,7 +39,6 @@ export default function DashboardLayout({
   };
 
   const handleLogout = () => {
-    logout();
     signOut({ callbackUrl: '/login' });
   };
 
