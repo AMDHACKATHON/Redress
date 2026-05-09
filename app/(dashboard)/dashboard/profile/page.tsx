@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,11 +12,24 @@ import {
   Globe2,
   LogOut,
   Mail,
+
+  Pencil,
   ShieldCheck,
+  Trash2,
   UserCircle2,
+  X,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import api from '@/lib/api';
+
+interface ApiError {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+}
 
 function formatJoinedDate(value: string) {
   const date = new Date(value);
@@ -55,8 +69,23 @@ function getMembershipText(value: string) {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, logout } = useStore();
+  const { user, logout, setUser } = useStore();
   const [copyingEmail, setCopyingEmail] = useState(false);
+
+  // Edit modals state
+  const [editingName, setEditingName] = useState(false);
+  const [editingCountry, setEditingCountry] = useState(false);
+  const [editingAvatar, setEditingAvatar] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Form values
+  const [newName, setNewName] = useState(user?.name || '');
+  const [newCountry, setNewCountry] = useState(user?.country || '');
+  const [newAvatar, setNewAvatar] = useState(user?.avatar || '');
+
+  // Loading states
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const initials = useMemo(() => {
     const name = user?.name?.trim() || 'User';
@@ -79,6 +108,83 @@ export default function ProfilePage() {
       toast.error('Could not copy email');
     } finally {
       setCopyingEmail(false);
+    }
+  };
+
+  const handleUpdateName = async () => {
+    if (!newName.trim() || updating) return;
+
+    try {
+      setUpdating(true);
+      const response = await api.patch('/profile/update', { name: newName });
+      setUser(response.data);
+      setEditingName(false);
+      toast.success('Name updated successfully');
+    } catch (error: unknown) {
+      console.error('Update name error:', error);
+      const apiError = error as ApiError;
+      const errorMsg = (apiError?.response?.data?.error) || 'Failed to update name';
+      toast.error(errorMsg);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleUpdateCountry = async () => {
+    if (updating) return;
+
+    try {
+      setUpdating(true);
+      const response = await api.patch('/profile/update', { country: newCountry || null });
+      setUser(response.data);
+      setEditingCountry(false);
+      toast.success('Country updated successfully');
+    } catch (error: unknown) {
+      console.error('Update country error:', error);
+      const apiError = error as ApiError;
+      const errorMsg = (apiError?.response?.data?.error) || 'Failed to update country';
+      toast.error(errorMsg);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleUpdateAvatar = async () => {
+    if (updating) return;
+
+    try {
+      setUpdating(true);
+      const response = await api.patch('/profile/update', { avatar: newAvatar || null });
+      setUser(response.data);
+      setEditingAvatar(false);
+      toast.success('Avatar updated successfully');
+    } catch (error: unknown) {
+      console.error('Update avatar error:', error);
+      const apiError = error as ApiError;
+      const errorMsg = (apiError?.response?.data?.error) || 'Failed to update avatar';
+      toast.error(errorMsg);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleting) return;
+
+    try {
+      setDeleting(true);
+      await api.delete('/profile/delete');
+      logout();
+      toast.success('Account deleted successfully');
+      router.push('/login');
+    } catch (error: unknown) {
+      console.error('Delete account error:', error);
+      const apiError = error as ApiError;
+      const errorMsg = (apiError?.response?.data?.error) || 'Failed to delete account';
+      toast.error(errorMsg);
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -132,18 +238,32 @@ export default function ProfilePage() {
         <section className="glass-card rounded-3xl p-6 md:p-8 shadow-xl shadow-black/5 dark:shadow-black/20">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
-              <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-indigo-500/15 to-purple-500/15 border border-white/20 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
-                    {initials || 'U'}
-                  </span>
-                )}
+              <div className="relative group">
+                <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-indigo-500/15 to-purple-500/15 border border-white/20 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                  {user.avatar ? (
+                    <Image
+                      src={user.avatar}
+                      alt={user.name}
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
+                      {initials || 'U'}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setNewAvatar(user.avatar || '');
+                    setEditingAvatar(true);
+                  }}
+                  className="absolute bottom-0 right-0 p-1.5 rounded-full bg-indigo-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Pencil size={12} />
+                </button>
               </div>
 
               <div className="space-y-2">
@@ -214,20 +334,38 @@ export default function ProfilePage() {
             <div className="mt-5 space-y-4">
               <div className="flex items-start gap-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
                 <UserCircle2 size={18} className="mt-0.5 text-indigo-500" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold">Display name</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{user.name}</p>
                 </div>
+                <button
+                  onClick={() => {
+                    setNewName(user.name);
+                    setEditingName(true);
+                  }}
+                  className="p-2 -mr-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+                >
+                  <Pencil size={16} className="text-slate-500" />
+                </button>
               </div>
 
               <div className="flex items-start gap-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
                 <Globe2 size={18} className="mt-0.5 text-indigo-500" />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold">Country</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     {user.country || 'Not set yet'}
                   </p>
                 </div>
+                <button
+                  onClick={() => {
+                    setNewCountry(user.country || '');
+                    setEditingCountry(true);
+                  }}
+                  className="p-2 -mr-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+                >
+                  <Pencil size={16} className="text-slate-500" />
+                </button>
               </div>
 
               <div className="flex items-start gap-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
@@ -241,10 +379,14 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="mt-5">
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Profile editing and settings will be added next.
-              </p>
+            <div className="mt-5 pt-4 border-t border-slate-200/70 dark:border-white/10">
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200/70 dark:border-red-500/20 bg-red-500/5 px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 size={14} />
+                Delete account
+              </button>
             </div>
           </div>
 
@@ -278,6 +420,196 @@ export default function ProfilePage() {
           </div>
         </aside>
       </div>
+
+      {/* Edit Name Modal */}
+      {editingName && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 shadow-2xl p-6 space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Edit display name</h2>
+              <button
+                onClick={() => setEditingName(false)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Enter your name"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setEditingName(false)}
+                className="flex-1 rounded-xl border border-slate-200 dark:border-white/10 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateName}
+                disabled={updating || !newName.trim()}
+                className="flex-1 rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors"
+              >
+                {updating ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Country Modal */}
+      {editingCountry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 shadow-2xl p-6 space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Edit country</h2>
+              <button
+                onClick={() => setEditingCountry(false)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              value={newCountry}
+              onChange={(e) => setNewCountry(e.target.value)}
+              placeholder="e.g., United States"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setEditingCountry(false)}
+                className="flex-1 rounded-xl border border-slate-200 dark:border-white/10 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateCountry}
+                disabled={updating}
+                className="flex-1 rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors"
+              >
+                {updating ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Avatar Modal */}
+      {editingAvatar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 shadow-2xl p-6 space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Edit avatar</h2>
+              <button
+                onClick={() => setEditingAvatar(false)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Enter a URL to your avatar image:
+              </p>
+              <input
+                type="url"
+                value={newAvatar}
+                onChange={(e) => setNewAvatar(e.target.value)}
+                placeholder="https://example.com/avatar.jpg"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+
+              {newAvatar && (
+                <div className="mt-4 flex justify-center">
+                  <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-indigo-500">
+                    <Image
+                      src={newAvatar}
+                      alt="Preview"
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setEditingAvatar(false)}
+                className="flex-1 rounded-xl border border-slate-200 dark:border-white/10 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateAvatar}
+                disabled={updating}
+                className="flex-1 rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-600 disabled:opacity-50 transition-colors"
+              >
+                {updating ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 shadow-2xl p-6 space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-red-600 dark:text-red-400">Delete account?</h2>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                This action cannot be undone. Your account and all associated data will be permanently deleted.
+              </p>
+
+              <div className="rounded-xl bg-red-500/10 border border-red-200 dark:border-red-500/20 p-3">
+                <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                  ⚠️ This will delete your account and all your complaints permanently.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 rounded-xl border border-slate-200 dark:border-white/10 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                className="flex-1 rounded-xl bg-red-500 px-4 py-3 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? 'Deleting...' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
