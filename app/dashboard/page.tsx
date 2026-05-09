@@ -33,9 +33,12 @@ export default function ComplaintsPage() {
   const startNewComplaint = async () => {
     setCreating(true);
     try {
-      const response = await api.post<{ complaintId: string }>('complaints');
+      // Corrected endpoint
+      const response = await api.post<{ _id: string }>('complaints/start', { 
+        summary: 'New Complaint' 
+      });
       toast.success('Complaint started!');
-      router.push(`/dashboard/complaint/${response.data.complaintId}`);
+      router.push(`/dashboard/complaint/${response.data._id}`);
     } catch (error) {
       console.error(error);
       toast.error('Failed to start new complaint');

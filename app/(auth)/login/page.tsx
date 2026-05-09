@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Shield, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import api from '@/lib/api';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { signIn } from 'next-auth/react';
 import { useStore } from '@/lib/store';
-import { AuthResponse } from '@/types';
 import { MinimalFooter } from '@/components/MinimalFooter';
 import { Navbar } from '@/components/Navbar';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setUser, setLoading, isLoading } = useStore();
+  const { setLoading, isLoading } = useStore();
   const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -22,34 +21,28 @@ export default function LoginPage() {
   });
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('redress_access_token');
-    if (token) {
-      router.push('/dashboard');
-    }
-  }, [router]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const response = await api.post<AuthResponse>('auth/login', formData);
-      const { user, tokens } = response.data;
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
+      });
 
-      localStorage.setItem('redress_access_token', tokens.access);
-      localStorage.setItem('redress_refresh_token', tokens.refresh);
-
-      setUser(user);
-      toast.success('Welcome back to Redress!');
-      router.push('/dashboard');
+      if (result?.error) {
+        setError('Invalid email or password');
+        toast.error('Login failed');
+      } else {
+        toast.success('Welcome back to Redress!');
+        router.push('/dashboard');
+        router.refresh(); // Ensure session is picked up
+      }
     } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail ||
-        err.response?.data?.error ||
-        'Login failed. Please check your credentials.';
-      setError(errorMessage);
+      setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -65,7 +58,6 @@ export default function LoginPage() {
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 mt-20">
-
         <h1 className="text-center text-2xl font-bold tracking-tight mb-1">
           Welcome back
         </h1>
