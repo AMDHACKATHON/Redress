@@ -6,9 +6,36 @@ import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
 import EscalationLetter from '@/lib/models/EscalationLetter';
 
-const AMD_API_URL = process.env.AMD_API_URL;
-const AMD_API_KEY = process.env.AMD_API_KEY;
-const MODEL = 'meta-llama/Llama-3.1-405B-Instruct';
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    await connectDB();
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+    }
+
+    if (complaint.userId.toString() !== userSession.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const escalation = await EscalationLetter.findOne({ complaintId: id });
+    if (!escalation) {
+      return NextResponse.json({ error: 'Escalation letter not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(escalation);
+  } catch (error: any) {
+    console.error('Error fetching escalation letter:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -30,97 +57,102 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch existing Letter
-    const existingLetter = await Letter.findOne({ complaintId: id });
-    if (!existingLetter) {
-      return NextResponse.json({ error: 'Original letter not found. Please generate it first.' }, { status: 400 });
+    // Check letterGenerated
+    if (!complaint.letterGenerated) {
+      return NextResponse.json({ error: 'Generate a complaint letter first.', code: 409 }, { status: 409 });
     }
 
-    // Fetch recent messages (last 10)
-    const recentMessages = await Message.find({ complaintId: id }).sort({ createdAt: -1 }).limit(10);
-    const contextText = recentMessages.reverse().map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
+    // Check if exists
+    const existingEscalation = await EscalationLetter.findOne({ complaintId: id });
+    if (existingEscalation) {
+      return NextResponse.json(existingEscalation);
+    }
 
-    const prompt = `The user's complaint was ignored. Generate an escalation letter to the regulator.
-Return ONLY a JSON object with no other text.
+    // Fetch original letter and history
+    const originalLetter = await Letter.findOne({ complaintId: id });
+    const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
+    const messageContext = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
 
-Original letter was sent to: ${existingLetter.recipient}
-Regulator: ${existingLetter.regulatorName} — ${existingLetter.regulatorContact}
-Country: ${existingLetter.regulatorCountry}
+    const systemPrompt = `You are a professional legal letter writer specializing in regulatory complaints. Based on the original complaint letter and conversation provided, write a formal escalation letter addressed to the relevant regulatory body.
 
-Recent Context:
-${contextText}
+The escalation letter must include:
+- Today's date
+- Reference to the original complaint and date it was sent
+- The fact that no satisfactory response was received
+- A clear request for regulatory intervention
+- A professional closing
 
-Return ONLY a JSON object in this format:
+Also provide step-by-step filing instructions for submitting to this regulator.
+
+Respond ONLY with a valid JSON object in this exact format and nothing else:
 {
-  "escalationLetter": "<full escalation letter text>",
-  "regulatorName": "<regulator name>",
-  "regulatorContact": "<regulator contact>",
-  "filingInstructions": "<step by step how to file with this regulator in ${existingLetter.regulatorCountry}>"
-}
-Today's date: ${new Date().toLocaleDateString()}. Reference the original complaint. Request intervention. Sign off as [Your Name].
-No markdown, no explanation. Pure JSON only.`;
+  "escalation_letter": "full escalation letter text here",
+  "regulator": {
+    "name": "regulator name",
+    "contact": "regulator contact email or address",
+    "filing_instructions": "step by step instructions on how to file"
+  }
+}`;
 
-    const response = await fetch(`${AMD_API_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${AMD_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.7,
-      }),
-    });
+    const userContent = `Original Complaint Letter:\n${originalLetter?.letter}\n\nConversation history:\n${messageContext}`;
 
-    if (!response.ok) {
-      throw new Error('Failed to generate escalation letter from AI');
+    let aiResponseContent = '';
+    try {
+      const response = await fetch(process.env.AMD_API_URL!, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.AMD_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/Llama-3.1-70B-Instruct',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent }
+          ],
+          max_tokens: 2048,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AMD API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      aiResponseContent = data.choices[0].message.content;
+    } catch (error) {
+      console.error('AMD API Call failed:', error);
+      return NextResponse.json({ error: 'Agent unavailable. Please try again.', code: 500 }, { status: 500 });
     }
 
-    const data = await response.json();
-    let content = data.choices[0].message.content.trim();
-    
-    // Remove markdown code blocks if present
-    content = content.replace(/^```json/, '').replace(/```$/, '').trim();
+    let parsedEscalation;
+    try {
+      const cleaned = aiResponseContent.replace(/^```json/, '').replace(/```$/, '').trim();
+      parsedEscalation = JSON.parse(cleaned);
+    } catch (error) {
+      console.error('Failed to parse AI response as JSON:', aiResponseContent);
+      return NextResponse.json({ error: 'Failed to generate a valid escalation letter structure.', code: 500 }, { status: 500 });
+    }
 
-    const parsedEscalation = JSON.parse(content);
-
-    // Save to EscalationLetter collection
+    // Save to MongoDB
     const escalation = await EscalationLetter.create({
       complaintId: id,
-      ...parsedEscalation,
+      escalationLetter: parsedEscalation.escalation_letter,
+      regulatorName: parsedEscalation.regulator.name,
+      regulatorContact: parsedEscalation.regulator.contact,
+      filingInstructions: parsedEscalation.regulator.filing_instructions
     });
 
     // Update complaint
     complaint.escalationGenerated = true;
-    complaint.stage = "escalate";
+    complaint.stage = 'escalate';
     await complaint.save();
 
-    return NextResponse.json(escalation);
+    return NextResponse.json(escalation, { status: 201 });
 
   } catch (error: any) {
-    console.error('Error generating escalation letter:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
-
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const userSession = await getSessionUser(req);
-    if (!userSession) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id } = await params;
-    await connectDB();
-
-    const escalation = await EscalationLetter.findOne({ complaintId: id });
-    if (!escalation) {
-      return NextResponse.json({ error: 'Escalation letter not found' }, { status: 404 });
-    }
-
-    return NextResponse.json(escalation);
-  } catch (error: any) {
+    console.error('Error in POST escalation:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

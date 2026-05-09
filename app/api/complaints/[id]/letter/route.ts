@@ -1,32 +1,162 @@
 import { NextRequest, NextResponse } from 'next/server';
-import api from '@/lib/api';
+import { getSessionUser } from '@/lib/auth';
+import { connectDB } from '@/lib/mongodb';
+import Complaint from '@/lib/models/Complaint';
+import Message from '@/lib/models/Message';
+import Letter from '@/lib/models/Letter';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const token = req.headers.get('Authorization');
-    const response = await api.get(`/complaints/${id}/letter/`, {
-      headers: { Authorization: token ?? '' }
-    });
-    return NextResponse.json(response.data, { status: response.status });
+    await connectDB();
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+    }
+
+    if (complaint.userId.toString() !== userSession.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const letter = await Letter.findOne({ complaintId: id });
+    if (!letter) {
+      return NextResponse.json({ error: 'Letter not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(letter);
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
+    console.error('Error fetching letter:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const token = req.headers.get('Authorization');
-    const response = await api.post(`/complaints/${id}/letter/generate/`, {}, {
-      headers: { Authorization: token ?? '' }
+    await connectDB();
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+    }
+
+    // Verify ownership
+    if (complaint.userId.toString() !== userSession.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Check stage
+    if (complaint.stage !== 'draft') {
+      return NextResponse.json({ error: 'Not ready for letter generation.', code: 409 }, { status: 409 });
+    }
+
+    // Check if exists
+    const existingLetter = await Letter.findOne({ complaintId: id });
+    if (existingLetter) {
+      return NextResponse.json(existingLetter);
+    }
+
+    // Fetch message history for context
+    const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
+    const messageContext = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
+
+    const systemPrompt = `You are a professional legal letter writer. Based on the complaint conversation provided, write a formal complaint letter. 
+
+The letter must include:
+- Today's date
+- A formal salutation
+- A clear description of the issue
+- What resolution the complainant is requesting
+- A deadline of 14 days for response
+- A professional closing
+
+Also identify:
+- The recipient title and organization
+- The recommended channel to send this letter (email or post)
+- The relevant regulatory body for this type of complaint and country, including their contact details
+
+Respond ONLY with a valid JSON object in this exact format and nothing else:
+{
+  "letter": "full letter text here",
+  "recipient": "Customer Service Manager, [Organization]",
+  "channel": "email",
+  "regulator": {
+    "name": "regulator name",
+    "contact": "regulator contact",
+    "country": "country"
+  }
+}`;
+
+    let aiResponseContent = '';
+    try {
+      const response = await fetch(process.env.AMD_API_URL!, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.AMD_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'meta-llama/Llama-3.1-70B-Instruct',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Conversation history:\n${messageContext}` }
+          ],
+          max_tokens: 2048,
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AMD API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      aiResponseContent = data.choices[0].message.content;
+    } catch (error) {
+      console.error('AMD API Call failed:', error);
+      return NextResponse.json({ error: 'Agent unavailable. Please try again.', code: 500 }, { status: 500 });
+    }
+
+    let parsedLetter;
+    try {
+      // Clean up markdown code blocks if AI included them
+      const cleaned = aiResponseContent.replace(/^```json/, '').replace(/```$/, '').trim();
+      parsedLetter = JSON.parse(cleaned);
+    } catch (error) {
+      console.error('Failed to parse AI response as JSON:', aiResponseContent);
+      return NextResponse.json({ error: 'Failed to generate a valid letter structure. Please try again.', code: 500 }, { status: 500 });
+    }
+
+    // Save to MongoDB
+    const letter = await Letter.create({
+      complaintId: id,
+      letter: parsedLetter.letter,
+      recipient: parsedLetter.recipient,
+      channel: parsedLetter.channel,
+      regulatorName: parsedLetter.regulator.name,
+      regulatorContact: parsedLetter.regulator.contact,
+      regulatorCountry: parsedLetter.regulator.country
     });
-    return NextResponse.json(response.data, { status: response.status });
+
+    // Update complaint
+    complaint.letterGenerated = true;
+    await complaint.save();
+
+    return NextResponse.json(letter, { status: 201 });
+
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
+    console.error('Error in POST letter:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
