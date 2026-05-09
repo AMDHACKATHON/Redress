@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Toaster } from "react-hot-toast";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,21 +29,9 @@ export default function RootLayout({
         />
       </head>
       <body className="noise-overlay">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          forcedTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
+        <Providers>
           {children}
-          <Toaster
-            position="bottom-right"
-            toastOptions={{
-              className: 'hot-toast-custom',
-            }}
-          />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
