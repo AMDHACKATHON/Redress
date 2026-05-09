@@ -6,17 +6,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  BadgeCheck,
-  CalendarDays,
-  Copy,
   Globe2,
   LogOut,
-  Mail,
-
   Pencil,
-  ShieldCheck,
   Trash2,
-  UserCircle2,
   X,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -70,7 +63,6 @@ function getMembershipText(value: string) {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, logout, setUser } = useStore();
-  const [copyingEmail, setCopyingEmail] = useState(false);
 
   // Edit modals state
   const [editingName, setEditingName] = useState(false);
@@ -96,20 +88,6 @@ export default function ProfilePage() {
       .map((part) => part[0]?.toUpperCase())
       .join('');
   }, [user?.name]);
-
-  const handleCopyEmail = async () => {
-    if (!user?.email || copyingEmail) return;
-
-    try {
-      setCopyingEmail(true);
-      await navigator.clipboard.writeText(user.email);
-      toast.success('Email copied');
-    } catch {
-      toast.error('Could not copy email');
-    } finally {
-      setCopyingEmail(false);
-    }
-  };
 
   const handleUpdateName = async () => {
     if (!newName.trim() || updating) return;
@@ -234,191 +212,105 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="space-y-6">
         <section className="glass-card rounded-3xl p-6 md:p-8 shadow-xl shadow-black/5 dark:shadow-black/20">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-indigo-500/15 to-purple-500/15 border border-white/20 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                  {user.avatar ? (
-                    <Image
-                      src={user.avatar}
-                      alt={user.name}
-                      width={80}
-                      height={80}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-300">
-                      {initials || 'U'}
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => {
-                    setNewAvatar(user.avatar || '');
-                    setEditingAvatar(true);
-                  }}
-                  className="absolute bottom-0 right-0 p-1.5 rounded-full bg-indigo-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Pencil size={12} />
-                </button>
+          {/* Avatar + Name Section */}
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8">
+            <div className="relative group flex-shrink-0">
+              <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-indigo-500/15 to-purple-500/15 border border-white/20 dark:border-white/10 flex items-center justify-center overflow-hidden">
+                {user.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={96}
+                    height={96}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-300">
+                    {initials || 'U'}
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl md:text-2xl font-bold tracking-tight">{user.name}</h2>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                    <BadgeCheck size={14} />
-                    Active
-                  </span>
+              <button
+                onClick={() => {
+                  setNewAvatar(user.avatar || '');
+                  setEditingAvatar(true);
+                }}
+                className="absolute bottom-0 right-0 p-2 rounded-full bg-indigo-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+              >
+                <Pencil size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-4">
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{user.name}</h2>
+                  <button
+                    onClick={() => {
+                      setNewName(user.name);
+                      setEditingName(true);
+                    }}
+                    className="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+                  >
+                    <Pencil size={18} className="text-slate-500" />
+                  </button>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Your secure profile overview for complaint resolution.
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Account created in {joinedDate}
                 </p>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
-              <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Complaints</p>
-                <p className="mt-2 text-2xl font-bold">{user.complaint_count}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-4">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Member since</p>
-                <p className="mt-2 text-sm font-semibold">{joinedDate}</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-4 text-center">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Complaints</p>
+                  <p className="mt-2 text-2xl font-bold">{user.complaint_count}</p>
+                </div>
+                <div className="col-span-2 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-4">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Member for</p>
+                  <p className="mt-2 text-sm font-semibold">{membershipText}</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                <Mail size={16} className="text-indigo-500" />
-                Email address
+          {/* Editable Fields */}
+          <div className="mt-8 space-y-3 pt-8 border-t border-slate-200/70 dark:border-white/10">
+            <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
+              <div className="flex items-center gap-3 flex-1">
+                <Globe2 size={18} className="text-indigo-500" />
+                <div>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Country</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    {user.country || 'Not set'}
+                  </p>
+                </div>
               </div>
-              <p className="mt-3 break-all text-sm text-slate-600 dark:text-slate-300">
-                {user.email}
-              </p>
               <button
-                onClick={handleCopyEmail}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200/70 dark:border-white/10 px-4 py-2 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                onClick={() => {
+                  setNewCountry(user.country || '');
+                  setEditingCountry(true);
+                }}
+                className="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
               >
-                <Copy size={14} />
-                {copyingEmail ? 'Copying...' : 'Copy email'}
+                <Pencil size={16} className="text-slate-500" />
               </button>
             </div>
+          </div>
 
-            <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                <CalendarDays size={16} className="text-indigo-500" />
-                Account age
-              </div>
-              <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                {membershipText}
-              </p>
-              <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-                Joined in {joinedDate}
-              </p>
-            </div>
+          {/* Delete Account */}
+          <div className="mt-6 pt-6 border-t border-slate-200/70 dark:border-white/10">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-red-200/70 dark:border-red-500/20 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              <Trash2 size={16} />
+              Delete account
+            </button>
           </div>
         </section>
-
-        <aside className="space-y-6">
-          <div className="glass-card rounded-3xl p-6 md:p-7">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-              Account details
-            </h3>
-
-            <div className="mt-5 space-y-4">
-              <div className="flex items-start gap-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
-                <UserCircle2 size={18} className="mt-0.5 text-indigo-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">Display name</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{user.name}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setNewName(user.name);
-                    setEditingName(true);
-                  }}
-                  className="p-2 -mr-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
-                >
-                  <Pencil size={16} className="text-slate-500" />
-                </button>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
-                <Globe2 size={18} className="mt-0.5 text-indigo-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">Country</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {user.country || 'Not set yet'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setNewCountry(user.country || '');
-                    setEditingCountry(true);
-                  }}
-                  className="p-2 -mr-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
-                >
-                  <Pencil size={16} className="text-slate-500" />
-                </button>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
-                <ShieldCheck size={18} className="mt-0.5 text-indigo-500" />
-                <div>
-                  <p className="text-sm font-semibold">Security</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Signed in with a protected session.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-slate-200/70 dark:border-white/10">
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-200/70 dark:border-red-500/20 bg-red-500/5 px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <Trash2 size={14} />
-                Delete account
-              </button>
-            </div>
-          </div>
-
-          <div className="glass-card rounded-3xl p-6 md:p-7">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-              Quick actions
-            </h3>
-
-            <div className="mt-5 space-y-3">
-              <button
-                onClick={handleCopyEmail}
-                className="w-full rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 px-4 py-3 text-sm font-semibold text-left hover:bg-slate-50 dark:hover:bg-white/10 transition-colors"
-              >
-                Copy contact email
-              </button>
-
-              <Link
-                href="/dashboard"
-                className="block w-full rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 px-4 py-3 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-white/10 transition-colors"
-              >
-                View complaints
-              </Link>
-
-              <button
-                onClick={handleLogout}
-                className="w-full rounded-2xl border border-red-200/70 dark:border-red-500/20 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                Sign out of account
-              </button>
-            </div>
-          </div>
-        </aside>
       </div>
 
       {/* Edit Name Modal */}
