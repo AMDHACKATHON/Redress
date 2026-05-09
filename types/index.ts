@@ -53,14 +53,11 @@ export interface EscalationLetter {
 }
 
 export interface AgentReply {
+  messageId: string;
   reply: string;
-  signal: {
-    signal: string;
-    stage: string;
-    complaint_type?: string;
-    country?: string;
-  } | null;
   stage: Stage;
+  ready_for_letter: boolean;
+  clarifying_questions_done: boolean;
 }
 
 export interface AuthTokens {
