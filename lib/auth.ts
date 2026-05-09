@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
-import { NextAuthOptions } from 'next-auth';
+import { NextAuthOptions, getServerSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
@@ -102,3 +102,33 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
   }
 };
+
+/**
+ * Combined helper to get the current user from either NextAuth session
+ * or the legacy custom JWT Bearer token (for backward compatibility).
+ */
+export async function getSessionUser(req?: Request) {
+  // 1. Try NextAuth session (Server Components/API Routes)
+  // Note: getServerSession works without req in some contexts, but req is better for middleware/certain environments
+  const session = await getServerSession(authOptions);
+  if (session?.user) {
+    return { 
+      id: (session.user as any).id as string, 
+      email: session.user.email as string 
+    };
+  }
+
+  // 2. Try Bearer token from Authorization header
+  if (req) {
+    const authHeader = req.headers.get('Authorization');
+    const payload = await getAuthUser(authHeader);
+    if (payload) {
+      return { 
+        id: payload.userId, 
+        email: payload.email 
+      };
+    }
+  }
+
+  return null;
+}

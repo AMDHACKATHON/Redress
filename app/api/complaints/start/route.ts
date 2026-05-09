@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 import { connectDB } from '@/lib/mongodb';
 import Complaint from '@/lib/models/Complaint';
 import User from '@/lib/models/User';
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -21,7 +20,7 @@ export async function POST(req: NextRequest) {
 
     // Create new complaint
     const complaint = await Complaint.create({
-      userId: (session.user as any).id,
+      userId: userSession.id,
       summary,
       stage: 'understand',
       letterGenerated: false,
@@ -29,7 +28,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Increment user's complaint count
-    await User.findByIdAndUpdate((session.user as any).id, {
+    await User.findByIdAndUpdate(userSession.id, {
       $inc: { complaintCount: 1 },
     });
 

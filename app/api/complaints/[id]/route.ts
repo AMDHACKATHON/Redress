@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 import { connectDB } from '@/lib/mongodb';
 import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
@@ -10,8 +9,8 @@ import User from '@/lib/models/User';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -24,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     // Check ownership
-    if (complaint.userId.toString() !== (session.user as any).id) {
+    if (complaint.userId.toString() !== userSession.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -43,8 +42,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -57,7 +56,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     // Check ownership
-    const userId = (session.user as any).id;
+    const userId = userSession.id;
     if (complaint.userId.toString() !== userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
