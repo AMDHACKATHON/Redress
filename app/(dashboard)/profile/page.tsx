@@ -1,9 +1,5 @@
-import React from 'react'
+import { redirect } from 'next/navigation';
 
-const Profile = () => {
-  return (
-    <div>Profile</div>
-  )
+export default function ProfileRedirect() {
+  redirect('/dashboard/profile');
 }
-
-export default Profile
