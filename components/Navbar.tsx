@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Shield, ArrowRight } from 'lucide-react';
-import { ThemeToggle } from './ThemeToggle';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -16,16 +15,14 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto flex items-center justify-between glass-card rounded-2xl px-6 py-3">
         <Link href="/" className="flex items-center space-x-2">
           <img src="/assets/logo.png" alt="Redress Logo" className="w-8 h-8 object-contain logo-navy" />
-          <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Redress</span>
+          <span className="text-xl font-bold tracking-tight text-white">Redress</span>
         </Link>
         
         <div className="flex items-center space-x-3 md:space-x-5">
-          <ThemeToggle />
-          
           {!isLoginPage && (
             <Link
               href="/login"
-              className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors hidden sm:inline-block"
+              className="text-sm font-medium text-slate-400 hover:text-white transition-colors hidden sm:inline-block"
             >
               Login
             </Link>
