@@ -5,6 +5,7 @@ import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
 import EscalationLetter from '@/lib/models/EscalationLetter';
+import { searchRegulator } from '@/lib/search';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -73,6 +74,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
     const messageContext = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
 
+    // Search for additional regulatory info
+    let searchResults = '';
+    try {
+      const country = originalLetter?.regulatorCountry || complaint.country;
+      const sector = complaint.complaintType || 'consumer';
+      if (country && sector) {
+        searchResults = await searchRegulator(country, sector);
+      }
+    } catch (e) {
+      console.error('Search failed, proceeding without it:', e);
+    }
+
     const systemPrompt = `You are a professional legal letter writer specializing in regulatory complaints. Based on the original complaint letter and conversation provided, write a formal escalation letter addressed to the relevant regulatory body.
 
 The escalation letter must include:
@@ -83,6 +96,11 @@ The escalation letter must include:
 - A professional closing
 
 Also provide step-by-step filing instructions for submitting to this regulator.
+
+${searchResults ? `Additional regulatory information from web search:
+${searchResults}
+
+Use this information to ensure the regulator name, contact details, and filing instructions are accurate.` : ''}
 
 Respond ONLY with a valid JSON object in this exact format and nothing else:
 {
