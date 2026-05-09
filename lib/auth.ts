@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { NextAuthOptions, getServerSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
@@ -41,10 +42,6 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
   }
 }
 
-/**
- * Extract and verify the Bearer token from an Authorization header.
- * Returns the decoded payload or null if invalid/missing.
- */
 export async function getAuthUser(authHeader: string | null): Promise<TokenPayload | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   const token = authHeader.replace('Bearer ', '');
@@ -55,6 +52,10 @@ export async function getAuthUser(authHeader: string | null): Promise<TokenPaylo
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -76,6 +77,7 @@ export const authOptions: NextAuthOptions = {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
+          image: user.avatar,
         };
       }
     })
@@ -84,15 +86,48 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google') {
+        await connectDB();
+        const existingUser = await User.findOne({ email: user.email });
+        if (!existingUser) {
+          await User.create({
+            name: user.name,
+            email: user.email,
+            avatar: user.image,
+            password: '',
+          });
+        } else if (!existingUser.avatar && user.image) {
+          existingUser.avatar = user.image;
+          await existingUser.save();
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+        token.avatar = user.image;
+      }
+      
+      // For Google users, refresh data from DB on each token update if needed,
+      // or at least ensure we have the DB ID instead of Google ID
+      if (account?.provider === 'google' || !token.id) {
+          await connectDB();
+          const dbUser = await User.findOne({ email: token.email });
+          if (dbUser) {
+            token.id = dbUser._id.toString();
+            token.avatar = dbUser.avatar;
+            token.country = dbUser.country;
+          }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
+        (session.user as any).image = token.avatar || session.user.image;
+        (session.user as any).country = token.country;
       }
       return session;
     }
@@ -103,13 +138,7 @@ export const authOptions: NextAuthOptions = {
   }
 };
 
-/**
- * Combined helper to get the current user from either NextAuth session
- * or the legacy custom JWT Bearer token (for backward compatibility).
- */
 export async function getSessionUser(req?: Request) {
-  // 1. Try NextAuth session (Server Components/API Routes)
-  // Note: getServerSession works without req in some contexts, but req is better for middleware/certain environments
   const session = await getServerSession(authOptions);
   if (session?.user) {
     return { 
@@ -118,7 +147,6 @@ export async function getSessionUser(req?: Request) {
     };
   }
 
-  // 2. Try Bearer token from Authorization header
   if (req) {
     const authHeader = req.headers.get('Authorization');
     const payload = await getAuthUser(authHeader);

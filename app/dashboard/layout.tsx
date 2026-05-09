@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Home, User, LogOut, Shield, Menu, X, Loader2 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import api from '@/lib/api';
@@ -104,14 +105,17 @@ export default function DashboardLayout({
           <div className="p-3 border-t border-slate-200/50 dark:border-white/5 space-y-2">
             <div className="flex items-center space-x-3 px-3 py-2">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 overflow-hidden shrink-0">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
+                {user?.avatar || session?.user?.image ? (
+                  <Image
+                    src={(user?.avatar || session?.user?.image) as string}
+                    alt={user?.name || session?.user?.name || 'User'}
+                    width={36}
+                    height={36}
                     className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
-                  user?.name?.charAt(0)?.toUpperCase() || 'U'
+                  (user?.name || session?.user?.name)?.charAt(0)?.toUpperCase() || 'U'
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -180,10 +184,17 @@ export default function DashboardLayout({
               <div className="glass-card rounded-2xl p-4 flex flex-col space-y-4 shadow-2xl border border-white/10">
                 <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/5">
                   <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-lg font-bold text-indigo-400 overflow-hidden shrink-0">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                    {user?.avatar || session?.user?.image ? (
+                      <Image 
+                        src={(user?.avatar || session?.user?.image) as string} 
+                        alt={user?.name || session?.user?.name || 'User'} 
+                        width={48}
+                        height={48}
+                        className="h-full w-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
-                      user?.name?.charAt(0)?.toUpperCase() || 'U'
+                      (user?.name || session?.user?.name)?.charAt(0)?.toUpperCase() || 'U'
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
