@@ -1,30 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import api from '@/lib/api';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { connectDB } from '@/lib/mongodb';
+import Complaint from '@/lib/models/Complaint';
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get('Authorization');
-    const response = await api.get('/complaints/', {
-      headers: { Authorization: token ?? '' }
-    });
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
-  }
-}
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-export async function POST(req: NextRequest) {
-  try {
-    const token = req.headers.get('Authorization');
-    const response = await api.post('/complaints/start/', {}, {
-      headers: { Authorization: token ?? '' }
-    });
-    return NextResponse.json(response.data, { status: response.status });
+    await connectDB();
+
+    const complaints = await Complaint.find({ userId: (session.user as any).id })
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json(complaints);
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
+    console.error('Error fetching complaints:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
