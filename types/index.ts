@@ -5,57 +5,62 @@ export interface User {
   email: string;
   name: string;
   avatar: string | null;
-  country: string;
+  country: string | null;
   complaint_count: number;
   created_at: string;
 }
 
 export interface Complaint {
-  complaint_id: string;
+  _id: string;
+  userId: string;
   summary: string;
   stage: Stage;
-  letter_generated: boolean;
-  escalation_generated: boolean;
-  created_at: string;
+  letterGenerated: boolean;
+  escalationGenerated: boolean;
+  complaintType: string | null;
+  country: string | null;
+  createdAt: string;
 }
 
 export interface Message {
-  message_id: string;
+  _id: string;
+  complaintId: string;
   role: 'user' | 'agent';
   content: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface Letter {
-  letter_id: string;
+  _id: string;
+  complaintId: string;
   letter: string;
   recipient: string;
   channel: string;
-  regulator: {
-    name: string;
-    contact: string;
-    country: string;
-  };
-  created_at: string;
+  regulatorName: string;
+  regulatorContact: string;
+  regulatorCountry: string;
+  createdAt: string;
 }
 
 export interface EscalationLetter {
-  escalation_id: string;
-  escalation_letter: string;
-  regulator: {
-    name: string;
-    contact: string;
-    filing_instructions: string;
-  };
-  created_at: string;
+  _id: string;
+  complaintId: string;
+  escalationLetter: string;
+  regulatorName: string;
+  regulatorContact: string;
+  filingInstructions: string;
+  createdAt: string;
 }
 
 export interface AgentReply {
-  message_id: string;
   reply: string;
+  signal: {
+    signal: string;
+    stage: string;
+    complaint_type?: string;
+    country?: string;
+  } | null;
   stage: Stage;
-  ready_for_letter: boolean;
-  clarifying_questions_done: boolean;
 }
 
 export interface AuthTokens {

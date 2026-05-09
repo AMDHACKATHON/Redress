@@ -6,6 +6,8 @@ export interface IComplaint extends Document {
   stage: 'understand' | 'draft' | 'escalate';
   letterGenerated: boolean;
   escalationGenerated: boolean;
+  complaintType: string | null;
+  country: string | null;
   createdAt: Date;
 }
 
@@ -31,6 +33,14 @@ const ComplaintSchema = new Schema<IComplaint>({
   escalationGenerated: {
     type: Boolean,
     default: false,
+  },
+  complaintType: {
+    type: String,
+    default: null,
+  },
+  country: {
+    type: String,
+    default: null,
   },
   createdAt: {
     type: Date,

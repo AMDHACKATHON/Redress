@@ -1,15 +1,22 @@
 import { create } from 'zustand';
-import { User, Complaint, ComplaintDetail } from '@/types';
+import { User, Complaint, Message, Letter, EscalationLetter } from '@/types';
 
 interface AppState {
   user: User | null;
   isAuthenticated: boolean;
   complaints: Complaint[];
-  activeComplaint: ComplaintDetail | null;
+  activeComplaint: Complaint | null;
+  messages: Message[];
+  letter: Letter | null;
+  escalationLetter: EscalationLetter | null;
   isLoading: boolean;
   setUser: (user: User | null) => void;
   setComplaints: (complaints: Complaint[]) => void;
-  setActiveComplaint: (complaint: ComplaintDetail | null) => void;
+  setActiveComplaint: (complaint: Complaint | null) => void;
+  setMessages: (messages: Message[]) => void;
+  addMessage: (message: Message) => void;
+  setLetter: (letter: Letter | null) => void;
+  setEscalationLetter: (letter: EscalationLetter | null) => void;
   setLoading: (loading: boolean) => void;
   logout: () => void;
 }
@@ -20,6 +27,9 @@ export const useStore = create<AppState>((set) => ({
   isAuthenticated: false,
   complaints: [],
   activeComplaint: null,
+  messages: [],
+  letter: null,
+  escalationLetter: null,
   isLoading: false,
 
   // Actions
@@ -35,6 +45,18 @@ export const useStore = create<AppState>((set) => ({
   setActiveComplaint: (activeComplaint) => 
     set({ activeComplaint }),
 
+  setMessages: (messages) => 
+    set({ messages }),
+
+  addMessage: (message) => 
+    set((state) => ({ messages: [...state.messages, message] })),
+
+  setLetter: (letter) => 
+    set({ letter }),
+
+  setEscalationLetter: (escalationLetter) => 
+    set({ escalationLetter }),
+
   setLoading: (isLoading) => 
     set({ isLoading }),
 
@@ -45,7 +67,10 @@ export const useStore = create<AppState>((set) => ({
       user: null, 
       isAuthenticated: false, 
       complaints: [], 
-      activeComplaint: null 
+      activeComplaint: null,
+      messages: [],
+      letter: null,
+      escalationLetter: null
     });
   },
 }));
