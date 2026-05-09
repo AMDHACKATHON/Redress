@@ -133,10 +133,10 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 pb-20 md:pb-0 relative z-10 flex flex-col min-h-screen">
+      <main className="flex-1 md:ml-64 pb-20 md:pb-0 relative z-10">
         {/* Mobile Header */}
-        <div className="md:hidden sticky top-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-lg border-b border-white/5">
-          <div className="px-6 py-4 flex items-center justify-between">
+        <div className="md:hidden sticky top-0 z-50 px-4 py-3 bg-[#0a0f1e]/80 backdrop-blur-lg border-b border-white/5">
+          <div className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center space-x-2">
                 <img src="/assets/logo.png" alt="Redress Logo" className="w-7 h-7 object-contain" />
               <span className="font-bold text-sm">Redress</span>
@@ -198,8 +198,8 @@ export default function DashboardLayout({
       </main>
 
       {/* Bottom Nav - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        <div className="glass-card border-x-0 border-b-0 rounded-t-2xl flex justify-around items-center h-16 px-4 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
+        <div className="glass-card rounded-2xl flex justify-around items-center h-16 px-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
