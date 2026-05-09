@@ -14,7 +14,7 @@ export function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between glass-card rounded-2xl px-6 py-3">
         <Link href="/" className="flex items-center space-x-2">
-          <img src="/assets/logo.png" alt="Redress Logo" className="w-8 h-8 object-contain logo-navy" />
+          <img src="/assets/logo.png" alt="Redress Logo" className="w-8 h-8 object-contain" />
           <span className="text-xl font-bold tracking-tight text-white">Redress</span>
         </Link>
         
