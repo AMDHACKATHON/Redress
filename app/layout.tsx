@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   description:
     "Draft formal complaint letters, find the right channel, and escalate to regulators — in minutes, for any country, any sector.",
   keywords: ["complaint", "resolution", "AI", "consumer rights", "escalation", "letter drafting"],
+  icons: {
+    icon: "/assets/logo.png",
+    apple: "/assets/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -36,14 +40,7 @@ export default function RootLayout({
           <Toaster
             position="bottom-right"
             toastOptions={{
-              style: {
-                background: '#0c0c14',
-                color: '#e2e8f0',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontFamily: 'Inter, sans-serif',
-              },
+              className: 'hot-toast-custom',
             }}
           />
         </ThemeProvider>

@@ -1,32 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
-import api from '@/lib/api';
+import { getSessionUser } from '@/lib/auth';
+import { connectDB } from '@/lib/mongodb';
+import Complaint from '@/lib/models/Complaint';
+import Message from '@/lib/models/Message';
+import Letter from '@/lib/models/Letter';
+import EscalationLetter from '@/lib/models/EscalationLetter';
+import User from '@/lib/models/User';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const token = req.headers.get('Authorization');
-    const response = await api.get(`/complaints/${id}/`, {
-      headers: { Authorization: token ?? '' }
+    await connectDB();
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+    }
+
+    // Check ownership
+    if (complaint.userId.toString() !== userSession.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Fetch messages
+    const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
+
+    return NextResponse.json({
+      ...complaint.toObject(),
+      messages,
     });
-    return NextResponse.json(response.data, { status: response.status });
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
+    console.error('Error fetching complaint:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
-    const token = req.headers.get('Authorization');
-    const response = await api.delete(`/complaints/${id}/`, {
-      headers: { Authorization: token ?? '' }
+    await connectDB();
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+    }
+
+    // Check ownership
+    const userId = userSession.id;
+    if (complaint.userId.toString() !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Delete associated data
+    await Promise.all([
+      Message.deleteMany({ complaintId: id }),
+      Letter.deleteOne({ complaintId: id }),
+      EscalationLetter.deleteOne({ complaintId: id }),
+      Complaint.findByIdAndDelete(id),
+    ]);
+
+    // Decrement user's complaint count
+    await User.findByIdAndUpdate(userId, {
+      $inc: { complaintCount: -1 },
     });
-    return NextResponse.json(response.data, { status: response.status });
+
+    return NextResponse.json({ message: 'Complaint deleted successfully' });
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
+    console.error('Error deleting complaint:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,5 +1,9 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { Navbar } from '@/components/Navbar';
 import { MinimalFooter } from '@/components/MinimalFooter';
 import {
   Shield,
@@ -54,8 +58,17 @@ const stats = [
 ];
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('redress_access_token');
+    if (token) {
+      router.push('/dashboard');
+    }
+  }, [router]);
+
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0f1e] text-slate-900 dark:text-slate-100 scroll-smooth transition-colors duration-300">
+    <div className="min-h-screen text-slate-900 dark:text-slate-100 scroll-smooth transition-colors duration-300">
       {/* Ambient Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-indigo-500/[0.07] to-purple-600/[0.07] blur-3xl animate-pulse-glow" />
@@ -63,33 +76,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-grid opacity-50" />
       </div>
 
-      {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between glass-card rounded-2xl px-6 py-3">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">Redress</span>
-          </Link>
-          <div className="flex items-center space-x-3 md:space-x-5">
-            <ThemeToggle />
-            <Link
-              href="/login"
-              className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors hidden sm:inline-block"
-            >
-              Login
-            </Link>
-            <Link
-              href="/register"
-              className="btn-primary !py-2.5 !px-5 !text-sm !rounded-xl flex items-center space-x-1.5"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Hero Section */}
       <section className="relative pt-36 pb-24 px-6 max-w-5xl mx-auto text-center">
@@ -101,7 +88,7 @@ export default function Home() {
         </div>
 
         <h1
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight mb-8 leading-[0.95] animate-fade-in-up"
+          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight mb-8 leading-[0.95] animate-fade-in-up text-slate-900 dark:text-white"
           style={{ animationDelay: '0.1s', animationFillMode: 'both' }}
         >
           Your complaint,
@@ -110,7 +97,7 @@ export default function Home() {
         </h1>
 
         <p
-          className="text-lg md:text-xl text-slate-500 dark:text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up"
+          className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-up"
           style={{ animationDelay: '0.2s', animationFillMode: 'both' }}
         >
           Draft formal complaint letters, find the right channel, and escalate to
@@ -144,7 +131,7 @@ export default function Home() {
           {stats.map((stat) => (
             <div key={stat.label} className="text-center">
               <div className="text-2xl md:text-3xl font-bold gradient-text">{stat.value}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">{stat.label}</div>
+              <div className="text-xs text-slate-600 dark:text-slate-500 mt-1">{stat.label}</div>
             </div>
           ))}
         </div>
@@ -154,10 +141,10 @@ export default function Home() {
       <section id="how-it-works" className="relative py-28 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
               Three steps to <span className="gradient-text">resolution</span>
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+            <p className="text-slate-600 dark:text-slate-400 max-w-lg mx-auto">
               Redress guides you from frustration to formal resolution with AI precision.
             </p>
           </div>
@@ -183,7 +170,7 @@ export default function Home() {
                     Step {item.step}
                   </div>
                   <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed">
+                  <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
                     {item.desc}
                   </p>
 
@@ -200,10 +187,10 @@ export default function Home() {
       <section className="relative py-28 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
               Built for <span className="gradient-text">every sector</span>
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+            <p className="text-slate-600 dark:text-slate-400 max-w-lg mx-auto">
               From banking disputes to landlord issues — Redress knows the right channel and regulator.
             </p>
           </div>
@@ -223,7 +210,7 @@ export default function Home() {
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 flex items-center justify-center mx-auto mb-3 group-hover:from-indigo-500/20 group-hover:to-purple-500/20 transition-colors">
                     <Icon className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
                   </div>
-                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-300">
                     {sector.label}
                   </p>
                 </div>
@@ -240,7 +227,7 @@ export default function Home() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Ready to get your complaint <span className="gradient-text">resolved?</span>
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
+            <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
               Join thousands who&apos;ve used Redress to hold companies and institutions accountable.
             </p>
             <Link

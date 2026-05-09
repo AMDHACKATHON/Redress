@@ -1,33 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import api from '@/lib/api';
+import { getSessionUser } from '@/lib/auth';
+import { connectDB } from '@/lib/mongodb';
+import Complaint from '@/lib/models/Complaint';
+import Message from '@/lib/models/Message';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
-    const token = req.headers.get('Authorization');
-    const response = await api.get(`/complaints/${id}/messages/`, {
-      headers: { Authorization: token ?? '' }
-    });
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
-  }
-}
+    const userSession = await getSessionUser(req);
+    if (!userSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
     const { id } = await params;
-    const body = await req.json();
-    const token = req.headers.get('Authorization');
-    const response = await api.post(`/complaints/${id}/message/`, body, {
-      headers: { Authorization: token ?? '' }
-    });
-    return NextResponse.json(response.data, { status: response.status });
+    await connectDB();
+
+    const complaint = await Complaint.findById(id);
+    if (!complaint) {
+      return NextResponse.json({ error: 'Complaint not found' }, { status: 404 });
+    }
+
+    // Check ownership
+    if (complaint.userId.toString() !== userSession.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
+
+    return NextResponse.json(messages);
   } catch (error: any) {
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Internal server error', code: 500 };
-    return NextResponse.json(data, { status });
+    console.error('Error fetching messages:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
