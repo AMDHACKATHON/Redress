@@ -182,9 +182,9 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   if (!activeComplaint) return null;
 
   return (
-    <div className="h-[calc(100vh-120px)] flex flex-col lg:flex-row gap-6 overflow-hidden">
+    <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-120px)] lg:overflow-hidden">
       {/* Left Column: Chat */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
+      <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm h-[60vh] lg:h-auto">
         {/* Chat Header */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
           <div className="flex items-center space-x-3">

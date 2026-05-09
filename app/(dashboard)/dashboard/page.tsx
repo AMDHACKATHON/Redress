@@ -38,7 +38,7 @@ export default function ComplaintsPage() {
       });
       const newComplaint = response.data;
       setComplaints([newComplaint, ...complaints]);
-      router.push(`/dashboard/complaint/${newComplaint._id}`);
+      router.push(`/complaint/${newComplaint._id}`);
     } catch (error) {
       console.error(error);
       toast.error('Failed to start new complaint');
@@ -94,7 +94,7 @@ export default function ComplaintsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Your Complaints</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">Track and manage your active resolutions</p>
@@ -102,7 +102,7 @@ export default function ComplaintsPage() {
         <button
           onClick={startNewComplaint}
           disabled={creating}
-          className="flex items-center space-x-2 bg-black dark:bg-white dark:text-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
+          className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-black dark:bg-white dark:text-black text-white px-4 py-3 sm:py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
         >
           {creating ? (
             <Loader2 className="animate-spin" size={18} />
@@ -114,7 +114,7 @@ export default function ComplaintsPage() {
       </div>
 
       {complaints.length === 0 ? (
-        <div className="bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl p-12 text-center space-y-4">
+        <div className="bg-white dark:bg-gray-900 border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl p-8 sm:p-12 text-center space-y-4">
           <div className="bg-gray-50 dark:bg-gray-800 h-16 w-16 rounded-full flex items-center justify-center mx-auto text-gray-400">
             <FileText size={32} />
           </div>
@@ -136,11 +136,11 @@ export default function ComplaintsPage() {
           {complaints.map((complaint) => (
             <div
               key={complaint._id}
-              className="group bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all cursor-pointer flex items-center justify-between"
-              onClick={() => router.push(`/dashboard/complaint/${complaint._id}`)}
+              className="group bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 sm:p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              onClick={() => router.push(`/complaint/${complaint._id}`)}
             >
-              <div className="space-y-3 flex-1 mr-4">
-                <div className="flex items-center space-x-3">
+              <div className="space-y-3 w-full sm:flex-1 sm:mr-4">
+                <div className="flex items-center justify-between sm:justify-start space-x-3 w-full">
                   <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStageStyles(complaint.stage)}`}>
                     {complaint.stage.toUpperCase()}
                   </span>
@@ -148,16 +148,16 @@ export default function ComplaintsPage() {
                     {new Date(complaint.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <h3 className="text-gray-900 dark:text-white font-medium line-clamp-1">
+                <h3 className="text-gray-900 dark:text-white font-medium line-clamp-2 sm:line-clamp-1">
                   {complaint.summary || 'Initial Investigation'}
                 </h3>
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-4 border-t border-gray-100 dark:border-gray-800 sm:border-0 pt-3 sm:pt-0 mt-1 sm:mt-0">
                 <button
                   onClick={(e) => deleteComplaint(e, complaint._id)}
                   disabled={deletingId === complaint._id}
-                  className="p-2 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                  className="p-2 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50 -ml-2 sm:ml-0"
                 >
                   {deletingId === complaint._id ? (
                     <Loader2 className="animate-spin" size={18} />

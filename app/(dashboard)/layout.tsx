@@ -133,10 +133,10 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 pb-20 md:pb-0 relative z-10">
+      <main className="flex-1 md:ml-64 pb-20 md:pb-0 relative z-10 flex flex-col min-h-screen">
         {/* Mobile Header */}
-        <div className="md:hidden sticky top-0 z-40 px-4 py-3">
-          <div className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between">
+        <div className="md:hidden sticky top-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-lg border-b border-white/5">
+          <div className="px-6 py-4 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center space-x-2">
                 <img src="/assets/logo.png" alt="Redress Logo" className="w-7 h-7 object-contain" />
               <span className="font-bold text-sm">Redress</span>
@@ -144,7 +144,7 @@ export default function DashboardLayout({
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-white/5"
+                className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-white/5 relative z-[60]"
               >
                 {mobileMenuOpen ? (
                   <X className="w-4 h-4" />
@@ -156,6 +156,39 @@ export default function DashboardLayout({
           </div>
         </div>
 
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="absolute top-[80px] left-4 right-4 animate-fade-in-up">
+              <div className="glass-card rounded-2xl p-4 flex flex-col space-y-4 shadow-2xl border border-white/10">
+                <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-lg font-bold text-indigo-400 overflow-hidden shrink-0">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                    ) : (
+                      user?.name?.charAt(0)?.toUpperCase() || 'U'
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-semibold truncate text-white">{user?.name}</p>
+                    <p className="text-sm text-slate-400 truncate">{user?.email}</p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center justify-center space-x-2 w-full p-4 text-sm font-bold text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all border border-red-500/10"
+                >
+                  <LogOut size={18} />
+                  <span>Log out of Redress</span>
+                </button>
+              </div>
+            </div>
+            {/* Invisible backdrop click area to close menu */}
+            <div className="absolute inset-0 z-[-1]" onClick={() => setMobileMenuOpen(false)} />
+          </div>
+        )}
+
         <div className="max-w-5xl mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)] flex flex-col">
           <div className="flex-1">
             {children}
@@ -165,8 +198,8 @@ export default function DashboardLayout({
       </main>
 
       {/* Bottom Nav - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-4">
-        <div className="glass-card rounded-2xl flex justify-around items-center h-16 px-4">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+        <div className="glass-card border-x-0 border-b-0 rounded-t-2xl flex justify-around items-center h-16 px-4 pb-safe">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
