@@ -74,7 +74,7 @@ export default function DashboardLayout({
 
   const navItems = [
     { label: 'Complaints', href: '/dashboard', icon: Home },
-    { label: 'Profile', href: '/profile', icon: User },
+    { label: 'Profile', href: '/dashboard/profile', icon: User },
   ];
 
   return (
