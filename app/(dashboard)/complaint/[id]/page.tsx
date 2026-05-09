@@ -4,20 +4,18 @@ import { useEffect, useState, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Send, 
-  FileText, 
-  Download, 
   ArrowLeft, 
   Loader2, 
   MessageSquare, 
   ShieldAlert,
   ChevronRight,
-  Printer
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { toast } from 'react-hot-toast';
-import { generateComplaintPDF, generateEscalationPDF } from '@/lib/pdf';
 import { Message, Complaint, Letter, EscalationLetter, AgentReply } from '@/types';
+import LetterDisplay from '@/components/letter/LetterDisplay';
+import PDFDownloadButton from '@/components/letter/PDFDownloadButton';
 
 export default function ComplaintDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -36,6 +34,8 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   const [sending, setSending] = useState(false);
   const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
   const [isEscalating, setIsEscalating] = useState(false);
+  const [showGenerateButton, setShowGenerateButton] = useState(false);
+  const [showEscalateButton, setShowEscalateButton] = useState(false);
 
   useEffect(() => {
     fetchComplaintData();
@@ -43,32 +43,29 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, sending]);
 
   const fetchComplaintData = async () => {
     setLoading(true);
     try {
-      const [complaintRes, letterRes, escalationRes] = await Promise.allSettled([
-        api.get<Complaint & { messages: Message[] }>(`complaints/${id}`),
-        api.get<Letter>(`complaints/${id}/letter`),
-        api.get<EscalationLetter>(`complaints/${id}/letter/escalate`)
-      ]);
+      const response = await api.get<Complaint & { messages: Message[] }>(`complaints/${id}`);
+      const { messages: history, ...complaint } = response.data;
+      setActiveComplaint(complaint);
+      setMessages(history);
 
-      if (complaintRes.status === 'fulfilled') {
-        const { messages: history, ...complaint } = complaintRes.value.data;
-        setActiveComplaint(complaint);
-        setMessages(history);
-      }
-
-      if (letterRes.status === 'fulfilled') {
-        setLetter(letterRes.value.data);
-      } else {
+      // Check for letter
+      try {
+        const letterRes = await api.get<Letter>(`complaints/${id}/letter`);
+        setLetter(letterRes.data);
+      } catch (e) {
         setLetter(null);
       }
 
-      if (escalationRes.status === 'fulfilled') {
-        setEscalationLetter(escalationRes.value.data);
-      } else {
+      // Check for escalation
+      try {
+        const escalationRes = await api.get<EscalationLetter>(`complaints/${id}/letter/escalate`);
+        setEscalationLetter(escalationRes.data);
+      } catch (e) {
         setEscalationLetter(null);
       }
 
@@ -93,7 +90,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
     setInput('');
     setSending(true);
 
-    // Optimistic user message (temporary ID)
+    // Optimistic user message
     const tempUserMsg: Message = {
       _id: Date.now().toString(),
       complaintId: id,
@@ -104,15 +101,15 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
     addMessage(tempUserMsg);
 
     try {
-      const response = await api.post<AgentReply>(`complaints/${id}/message`, {
+      const response = await api.post<AgentReply>(`complaints/${id}/messages`, {
         content: userMessageContent
       });
 
-      const { reply, signal, stage } = response.data;
+      const { reply, stage, ready_for_letter, messageId } = response.data;
 
       // Add agent message
       const agentMsg: Message = {
-        _id: (Date.now() + 1).toString(),
+        _id: messageId,
         complaintId: id,
         role: 'agent',
         content: reply,
@@ -120,15 +117,18 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
       };
       addMessage(agentMsg);
 
-      // Update complaint state if stage changed
+      // Update complaint state
       if (activeComplaint) {
         setActiveComplaint({ ...activeComplaint, stage });
       }
 
-      if (signal?.signal === 'ready_for_letter') {
-        toast.success('Your complaint letter is ready to be generated!');
-      } else if (signal?.signal === 'escalate') {
-        toast.success('Escalation is recommended.');
+      if (ready_for_letter) {
+        setShowGenerateButton(true);
+        toast.success('Your complaint letter is ready!');
+      }
+
+      if (stage === 'escalate') {
+        setShowEscalateButton(true);
       }
 
     } catch (error) {
@@ -141,11 +141,12 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   const handleGenerateLetter = async () => {
     setIsGeneratingLetter(true);
     try {
-      const response = await api.post<Letter>(`complaints/${id}/letter/generate`);
+      const response = await api.post<Letter>(`complaints/${id}/letter`);
       setLetter(response.data);
       if (activeComplaint) {
         setActiveComplaint({ ...activeComplaint, letterGenerated: true, stage: 'draft' });
       }
+      setShowGenerateButton(false);
       toast.success('Complaint letter generated!');
     } catch (error) {
       toast.error('Failed to generate letter');
@@ -162,6 +163,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
       if (activeComplaint) {
         setActiveComplaint({ ...activeComplaint, escalationGenerated: true, stage: 'escalate' });
       }
+      setShowEscalateButton(false);
       toast.success('Escalation letter generated!');
     } catch (error) {
       toast.error('Failed to escalate');
@@ -199,7 +201,10 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
                 {activeComplaint.summary || 'AI Investigation'}
               </h2>
               <div className="flex items-center space-x-2">
-                <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                <span className={`h-2 w-2 rounded-full ${
+                  activeComplaint.stage === 'understand' ? 'bg-blue-500' : 
+                  activeComplaint.stage === 'draft' ? 'bg-yellow-500' : 'bg-red-500'
+                }`}></span>
                 <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">
                   {activeComplaint.stage} Stage
                 </span>
@@ -263,9 +268,10 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
                   sendMessage(e);
                 }
               }}
-              placeholder="Type your message..."
+              disabled={sending}
+              placeholder={sending ? "Waiting for agent..." : "Type your message..."}
               rows={1}
-              className="w-full pl-4 pr-12 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-black dark:focus:ring-white transition-all resize-none dark:text-white"
+              className="w-full pl-4 pr-12 py-3 bg-gray-50 dark:bg-gray-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-black dark:focus:ring-white transition-all resize-none dark:text-white disabled:opacity-50"
             />
             <button
               type="submit"
@@ -279,7 +285,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Right Column: Actions & Letters */}
-      <div className="w-full lg:w-[400px] flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="w-full lg:w-[400px] flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar pb-10">
         {/* Stage Actions */}
         <div className="bg-black text-white dark:bg-white dark:text-black p-6 rounded-2xl space-y-4 shadow-xl shadow-black/5 dark:shadow-white/5">
           <div className="flex items-center space-x-2 opacity-80 text-xs font-bold uppercase tracking-widest">
@@ -288,169 +294,79 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
           </div>
           
           <div className="space-y-3">
-            {(!activeComplaint.letterGenerated) && (
+            {(showGenerateButton || (activeComplaint.stage === 'draft' && !activeComplaint.letterGenerated)) && (
               <button 
                 onClick={handleGenerateLetter}
-                disabled={isGeneratingLetter || activeComplaint.stage === 'understand'}
+                disabled={isGeneratingLetter}
                 className="w-full flex items-center justify-between bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-black/20 p-4 rounded-xl border border-white/20 dark:border-black/20 transition-all group disabled:opacity-50"
               >
                 <div className="text-left">
                   <p className="font-semibold text-sm">Generate Complaint Letter</p>
-                  <p className="text-[10px] opacity-60">
-                    {activeComplaint.stage === 'understand' ? 'Waiting for AI approval...' : 'Ready to generate'}
-                  </p>
+                  <p className="text-[10px] opacity-60">Ready to generate</p>
                 </div>
                 {isGeneratingLetter ? <Loader2 className="animate-spin" size={18} /> : <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />}
               </button>
             )}
 
-            {activeComplaint.letterGenerated && (
-              <button 
-                onClick={() => scrollToLetter('letter')}
-                className="w-full flex items-center justify-between bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-black/20 p-4 rounded-xl border border-white/20 dark:border-black/20 transition-all group"
-              >
-                <div className="text-left">
-                  <p className="font-semibold text-sm">View Draft Letter</p>
-                  <p className="text-[10px] opacity-60">Generated & Ready</p>
-                </div>
-                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-            )}
-
-            {activeComplaint.letterGenerated && !activeComplaint.escalationGenerated && (
+            {(showEscalateButton || (activeComplaint.stage === 'escalate' && !activeComplaint.escalationGenerated)) && (
               <button 
                 onClick={handleEscalate}
-                disabled={isEscalating || activeComplaint.stage !== 'escalate'}
-                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all group disabled:opacity-50 ${
-                  activeComplaint.stage === 'escalate' 
-                  ? 'bg-red-500/20 border-red-500/30 hover:bg-red-500/30' 
-                  : 'bg-white/5 border-white/10 opacity-40'
-                }`}
+                disabled={isEscalating}
+                className="w-full flex items-center justify-between p-4 rounded-xl border transition-all group disabled:opacity-50 bg-red-500/20 border-red-500/30 hover:bg-red-500/30"
               >
                 <div className="text-left">
-                  <p className={`font-semibold text-sm ${activeComplaint.stage === 'escalate' ? 'text-red-200 dark:text-red-700' : ''}`}>Escalate to Regulator</p>
-                  <p className={`text-[10px] ${activeComplaint.stage === 'escalate' ? 'text-red-300/60 dark:text-red-700/60' : ''}`}>
-                    {activeComplaint.stage === 'escalate' ? 'Action Required' : 'Available if ignored'}
-                  </p>
+                  <p className="font-semibold text-sm text-red-200 dark:text-red-700">Escalate to Regulator</p>
+                  <p className="text-[10px] text-red-300/60 dark:text-red-700/60">Action Required</p>
                 </div>
-                {isEscalating ? <Loader2 className="animate-spin" size={18} /> : <ShieldAlert size={18} className={activeComplaint.stage === 'escalate' ? 'text-red-300' : 'text-gray-500'} />}
+                {isEscalating ? <Loader2 className="animate-spin" size={18} /> : <ShieldAlert size={18} className="text-red-300" />}
               </button>
             )}
 
-            {activeComplaint.escalationGenerated && (
-              <button 
-                onClick={() => scrollToLetter('escalation')}
-                className="w-full flex items-center justify-between bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-black/20 p-4 rounded-xl border border-white/20 dark:border-black/20 transition-all group"
-              >
-                <div className="text-left">
-                  <p className="font-semibold text-sm">View Escalation Letter</p>
-                  <p className="text-[10px] opacity-60">Final Resolution Step</p>
-                </div>
-                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </button>
+            {!letter && !showGenerateButton && activeComplaint.stage === 'understand' && (
+              <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-center">
+                <p className="text-xs opacity-60 italic">Your complaint letter will appear here once the agent is ready.</p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Letter Preview */}
-        {letter && (
-          <div id="letter-section" className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
-              <div className="flex items-center space-x-2">
-                <FileText size={16} className="text-gray-400" />
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Complaint Letter</span>
-              </div>
-              <button 
-                onClick={() => generateComplaintPDF(letter)}
-                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors text-gray-500"
-                title="Download PDF"
-              >
-                <Download size={16} />
-              </button>
+        {/* Letter Panel */}
+        <div className="space-y-6">
+          {letter && (
+            <div className="space-y-4">
+              <LetterDisplay 
+                title="Formal Complaint Letter"
+                letter={letter.letter}
+                recipient={letter.recipient}
+                channel={letter.channel}
+                regulator={{
+                  name: letter.regulatorName,
+                  contact: letter.regulatorContact,
+                  country: letter.regulatorCountry
+                }}
+              />
+              <PDFDownloadButton letter={letter.letter} filename="redress-complaint.pdf" />
             </div>
-            <div className="p-6">
-              <div className="text-[11px] text-gray-400 uppercase tracking-widest font-bold mb-4">Content Preview</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap font-serif italic line-clamp-[12]">
-                {letter.letter}
-              </div>
-              <div className="mt-6 pt-6 border-t border-gray-50 dark:border-gray-800 space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400">Recipient:</span>
-                  <span className="text-gray-900 dark:text-white font-medium">{letter.recipient}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400">Channel:</span>
-                  <span className="text-gray-900 dark:text-white font-medium">{letter.channel}</span>
-                </div>
-                <div className="pt-2">
-                  <div className="text-[10px] text-gray-400 uppercase font-bold mb-1">Regulator Info</div>
-                  <p className="text-xs text-gray-900 dark:text-white font-medium">{letter.regulatorName}</p>
-                  <p className="text-[10px] text-gray-500">{letter.regulatorContact}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => generateComplaintPDF(letter)}
-                className="w-full mt-6 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center space-x-2 border border-gray-100 dark:border-gray-700"
-              >
-                <Printer size={14} />
-                <span>Download Full PDF</span>
-              </button>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Escalation Preview */}
-        {escalationLetter && (
-          <div id="escalation-section" className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 border-b border-red-100 dark:border-red-900/30 flex items-center justify-between bg-red-100/30 dark:bg-red-900/20">
-              <div className="flex items-center space-x-2">
-                <ShieldAlert size={16} className="text-red-500" />
-                <span className="text-sm font-semibold text-red-900 dark:text-red-200">Escalation Letter</span>
-              </div>
-              <button 
-                onClick={() => generateEscalationPDF(escalationLetter)}
-                className="p-1.5 hover:bg-red-200 dark:hover:bg-red-900/50 rounded-lg transition-colors text-red-500"
-                title="Download PDF"
-              >
-                <Download size={16} />
-              </button>
+          {escalationLetter && (
+            <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <LetterDisplay 
+                title="Escalation to Regulator"
+                letter={escalationLetter.escalationLetter}
+                recipient={escalationLetter.regulatorName}
+                channel="Regulatory Portal"
+                regulator={{
+                  name: escalationLetter.regulatorName,
+                  contact: escalationLetter.regulatorContact,
+                  filing_instructions: escalationLetter.filingInstructions
+                }}
+              />
+              <PDFDownloadButton letter={escalationLetter.escalationLetter} filename="redress-escalation.pdf" />
             </div>
-            <div className="p-6">
-              <div className="text-sm text-red-800 dark:text-red-300/80 leading-relaxed whitespace-pre-wrap font-serif italic line-clamp-[10] mb-6">
-                {escalationLetter.escalationLetter}
-              </div>
-              
-              <div className="space-y-4">
-                <div className="bg-white/60 dark:bg-black/20 p-4 rounded-xl border border-red-200/50 dark:border-red-900/20">
-                  <h4 className="text-[10px] uppercase font-bold text-red-900 dark:text-red-400 mb-2 tracking-widest">Filing Instructions</h4>
-                  <p className="text-xs text-red-800/80 dark:text-red-300/60 leading-relaxed">
-                    {escalationLetter.filingInstructions}
-                  </p>
-                </div>
-                
-                <div className="flex justify-between text-xs px-1">
-                  <span className="text-red-900/50 dark:text-red-400/50">Regulator:</span>
-                  <span className="text-red-900 dark:text-red-200 font-bold">{escalationLetter.regulatorName}</span>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => generateEscalationPDF(escalationLetter)}
-                className="w-full mt-6 py-3 bg-red-500 text-white text-xs font-bold rounded-xl hover:bg-red-600 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-red-500/20"
-              >
-                <Download size={14} />
-                <span>Download Final Escalation</span>
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
-
-  function scrollToLetter(type: 'letter' | 'escalation') {
-    const id = type === 'letter' ? 'letter-section' : 'escalation-section';
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  }
 }

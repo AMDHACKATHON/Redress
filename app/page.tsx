@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/Navbar';
 import { MinimalFooter } from '@/components/MinimalFooter';
 import {
@@ -59,13 +60,13 @@ const stats = [
 
 export default function Home() {
   const router = useRouter();
+  const { status } = useSession();
 
   useEffect(() => {
-    const token = localStorage.getItem('redress_access_token');
-    if (token) {
+    if (status === 'authenticated') {
       router.push('/dashboard');
     }
-  }, [router]);
+  }, [status, router]);
 
   return (
     <div className="min-h-screen text-slate-900 dark:text-slate-100 scroll-smooth transition-colors duration-300">

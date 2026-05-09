@@ -33,12 +33,9 @@ export default function ComplaintsPage() {
   const startNewComplaint = async () => {
     setCreating(true);
     try {
-      const response = await api.post<Complaint>('complaints/start', {
-        summary: "New Complaint - Getting Started"
-      });
-      const newComplaint = response.data;
-      setComplaints([newComplaint, ...complaints]);
-      router.push(`/complaint/${newComplaint._id}`);
+      const response = await api.post<{ complaintId: string }>('complaints');
+      toast.success('Complaint started!');
+      router.push(`/dashboard/complaint/${response.data.complaintId}`);
     } catch (error) {
       console.error(error);
       toast.error('Failed to start new complaint');
@@ -137,7 +134,7 @@ export default function ComplaintsPage() {
             <div
               key={complaint._id}
               className="group bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4 sm:p-5 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-              onClick={() => router.push(`/complaint/${complaint._id}`)}
+              onClick={() => router.push(`/dashboard/complaint/${complaint._id}`)}
             >
               <div className="space-y-3 w-full sm:flex-1 sm:mr-4">
                 <div className="flex items-center justify-between sm:justify-start space-x-3 w-full">
