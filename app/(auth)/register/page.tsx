@@ -54,8 +54,13 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      toast.success('Account created successfully! Please sign in.');
-      router.push('/login');
+      const { user, tokens } = response.data;
+      localStorage.setItem('redress_access_token', tokens.access);
+      localStorage.setItem('redress_refresh_token', tokens.refresh);
+      useStore.getState().setUser(user);
+
+      toast.success('Account created successfully! Welcome to Redress.');
+      router.push('/dashboard');
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail ||
