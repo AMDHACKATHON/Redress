@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,6 +11,7 @@ import {
   Pencil,
   Trash2,
   X,
+  Camera,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useStore } from '@/lib/store';
@@ -78,6 +79,22 @@ export default function ProfilePage() {
   // Loading states
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // File input ref for avatar upload
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleAvatarFileChange = (e: any) => {
+    const file = e?.target?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setNewAvatar(String(reader.result));
+      setEditingAvatar(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerFileInput = () => fileInputRef.current?.click();
 
   const initials = useMemo(() => {
     const name = user?.name?.trim() || 'User';
@@ -192,10 +209,11 @@ export default function ProfilePage() {
         <div className="space-y-1">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors"
+            aria-label="Back"
+            title="Back"
           >
             <ArrowLeft size={16} />
-            Back to complaints
           </Link>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Profile</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -212,77 +230,73 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
+        {/* Hero Section with Avatar */}
         <section className="glass-card rounded-3xl p-6 md:p-8 shadow-xl shadow-black/5 dark:shadow-black/20">
-          {/* Avatar + Name Section */}
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8">
-            <div className="relative group flex-shrink-0">
-              <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-indigo-500/15 to-purple-500/15 border border-white/20 dark:border-white/10 flex items-center justify-center overflow-hidden">
+          <div className="flex flex-col items-center text-center space-y-6">
+            {/* Avatar */}
+            <div className="relative group">
+              <div className="h-32 w-32 md:h-40 md:w-40 rounded-full bg-gradient-to-br from-indigo-500/15 to-purple-500/15 border-2 border-indigo-500/30 dark:border-indigo-500/50 flex items-center justify-center overflow-hidden shadow-lg">
                 {user.avatar ? (
                   <Image
                     src={user.avatar}
                     alt={user.name}
-                    width={96}
-                    height={96}
+                    width={160}
+                    height={160}
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="text-3xl font-bold text-indigo-600 dark:text-indigo-300">
+                  <span className="text-5xl md:text-6xl font-bold text-indigo-600 dark:text-indigo-300">
                     {initials || 'U'}
                   </span>
                 )}
               </div>
 
+              <input ref={fileInputRef} onChange={handleAvatarFileChange} className="hidden" type="file" accept="image/*" />
+
               <button
-                onClick={() => {
-                  setNewAvatar(user.avatar || '');
-                  setEditingAvatar(true);
-                }}
-                className="absolute bottom-0 right-0 p-2 rounded-full bg-indigo-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                onClick={triggerFileInput}
+                className="absolute bottom-0 right-0 p-3 rounded-full bg-indigo-500 text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-indigo-600"
+                aria-label="Edit avatar"
               >
-                <Pencil size={16} />
+                <Camera size={20} />
               </button>
             </div>
 
-            <div className="flex-1 space-y-4">
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{user.name}</h2>
+            {/* Name + Edit */}
+            <div className="space-y-2 w-full">
+              <div className="flex items-center justify-center gap-3">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight inline-flex items-center gap-3">
+                  {user.name}
                   <button
                     onClick={() => {
                       setNewName(user.name);
                       setEditingName(true);
                     }}
                     className="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+                    aria-label="Edit name"
                   >
-                    <Pencil size={18} className="text-slate-500" />
+                    <Pencil size={20} className="text-slate-400" />
                   </button>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Account created in {joinedDate}
-                </p>
+                </h2>
               </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-4 text-center">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Complaints</p>
-                  <p className="mt-2 text-2xl font-bold">{user.complaint_count}</p>
-                </div>
-                <div className="col-span-2 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 p-4">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Member for</p>
-                  <p className="mt-2 text-sm font-semibold">{membershipText}</p>
-                </div>
-              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {membershipText} • Joined {joinedDate}
+              </p>
             </div>
+
+            {/* (stats removed here — complaints moved into country row below) */}
           </div>
 
-          {/* Editable Fields */}
-          <div className="mt-8 space-y-3 pt-8 border-t border-slate-200/70 dark:border-white/10">
+          {/* Location + Complaints */}
+          <div className="mt-8 pt-8 border-t border-slate-200/70 dark:border-white/10 space-y-4">
             <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
               <div className="flex items-center gap-3 flex-1">
-                <Globe2 size={18} className="text-indigo-500" />
+                <div className="p-2 rounded-lg bg-indigo-500/10 dark:bg-indigo-500/20">
+                  <Globe2 size={20} className="text-indigo-600 dark:text-indigo-400" />
+                </div>
                 <div>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Country</p>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">LOCATION</p>
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">
                     {user.country || 'Not set'}
                   </p>
@@ -294,24 +308,39 @@ export default function ProfilePage() {
                   setEditingCountry(true);
                 }}
                 className="p-2 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
+                aria-label="Edit country"
               >
-                <Pencil size={16} className="text-slate-500" />
+                <Pencil size={18} className="text-slate-400" />
               </button>
+            </div>
+
+            <div className="rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 p-4">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">COMP</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">{user.complaint_count}</p>
             </div>
           </div>
 
-          {/* Delete Account */}
-          <div className="mt-6 pt-6 border-t border-slate-200/70 dark:border-white/10">
+        </section>
+      </div>
+
+      {/* Delete account section */}
+      <section className="glass-card rounded-3xl p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold">Danger zone</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Permanently delete your account and all associated data.</p>
+          </div>
+          <div className="flex items-center">
             <button
               onClick={() => setShowDeleteModal(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-red-200/70 dark:border-red-500/20 bg-red-500/5 px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-red-200/70 dark:border-red-500/20 bg-red-500/5 px-6 py-3 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors"
             >
               <Trash2 size={16} />
               Delete account
             </button>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
       {/* Edit Name Modal */}
       {editingName && (
