@@ -317,12 +317,3 @@ body {
 .stagger-6 { animation-delay: 0.6s; }
 
 /* ─── Logo Filters ─── */
-.logo-navy {
-  /* Navy blue filter */
-  filter: brightness(0) saturate(100%) invert(13%) sepia(90%) saturate(5412%) hue-rotate(236deg) brightness(83%) contrast(115%);
-}
-
-.dark .logo-navy {
-  /* Invert to make it visible (bright/white-blue) in dark mode */
-  filter: brightness(0) saturate(100%) invert(85%) sepia(10%) saturate(2000%) hue-rotate(210deg) brightness(100%) contrast(100%);
-}

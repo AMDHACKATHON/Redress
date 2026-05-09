@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { Home, User, LogOut, Shield, Menu, X } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { MinimalFooter } from '@/components/MinimalFooter';
+import Loader from '@/components/Loader';
 
 export default function DashboardLayout({
   children,
@@ -49,27 +49,7 @@ export default function DashboardLayout({
   };
 
   if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0a0f1e]">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center animate-pulse">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex space-x-1">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full bg-indigo-500/60"
-                style={{
-                  animation: 'pulse-glow 1.4s ease-in-out infinite',
-                  animationDelay: `${i * 0.2}s`,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <Loader />;
   }
 
   const navItems = [
@@ -91,10 +71,9 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="p-5 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center space-x-2">
-              <img src="/assets/logo.png" alt="Redress Logo" className="w-8 h-8 object-contain logo-navy" />
+              <img src="/assets/logo.png" alt="Redress Logo" className="w-8 h-8 object-contain" />
               <span className="text-lg font-bold tracking-tight">Redress</span>
             </Link>
-            <ThemeToggle />
           </div>
 
           {/* Navigation */}
@@ -159,11 +138,10 @@ export default function DashboardLayout({
         <div className="md:hidden sticky top-0 z-40 px-4 py-3">
           <div className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center space-x-2">
-                <img src="/assets/logo.png" alt="Redress Logo" className="w-7 h-7 object-contain logo-navy" />
+                <img src="/assets/logo.png" alt="Redress Logo" className="w-7 h-7 object-contain" />
               <span className="font-bold text-sm">Redress</span>
             </Link>
             <div className="flex items-center space-x-2">
-              <ThemeToggle />
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-white/5"
