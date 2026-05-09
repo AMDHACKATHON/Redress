@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -9,11 +9,19 @@ import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { AuthResponse } from '@/types';
 import { MinimalFooter } from '@/components/MinimalFooter';
+import { Navbar } from '@/components/Navbar';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { setUser, setLoading, isLoading } = useStore();
+  const { setLoading, isLoading } = useStore();
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('redress_access_token');
+    if (token) {
+      router.push('/dashboard');
+    }
+  }, [router]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -60,21 +68,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0f1e] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+    <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative">
+      <Navbar />
       {/* Ambient background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-purple-500/[0.06] to-pink-600/[0.06] blur-3xl animate-pulse-glow" />
         <div className="absolute inset-0 bg-grid opacity-30" />
       </div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        {/* Logo */}
-        <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Shield className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight">Redress</span>
-        </Link>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 mt-20">
 
         <h1 className="text-center text-2xl font-bold tracking-tight mb-1">
           Create your account

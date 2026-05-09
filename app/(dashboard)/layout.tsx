@@ -78,7 +78,7 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-[#0a0f1e] flex transition-colors duration-300 relative">
+    <div className="min-h-screen flex transition-colors duration-300 relative">
       {/* Background ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-1/3 -left-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-indigo-500/[0.03] to-purple-600/[0.03] blur-3xl" />
@@ -91,9 +91,7 @@ export default function DashboardLayout({
           {/* Logo */}
           <div className="p-5 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-white" />
-              </div>
+              <img src="/assets/logo.png" alt="Redress Logo" className="w-8 h-8 object-contain logo-navy" />
               <span className="text-lg font-bold tracking-tight">Redress</span>
             </Link>
             <ThemeToggle />
@@ -161,9 +159,7 @@ export default function DashboardLayout({
         <div className="md:hidden sticky top-0 z-40 px-4 py-3">
           <div className="glass-card rounded-2xl px-4 py-3 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                <Shield className="w-3.5 h-3.5 text-white" />
-              </div>
+                <img src="/assets/logo.png" alt="Redress Logo" className="w-7 h-7 object-contain logo-navy" />
               <span className="font-bold text-sm">Redress</span>
             </Link>
             <div className="flex items-center space-x-2">
