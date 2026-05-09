@@ -12,7 +12,7 @@ const ADMIN_EMAIL = 'hello@samkiel.dev';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -22,7 +22,7 @@ export async function GET(
     }
 
     await connectDB();
-    const { id } = params;
+    const { id } = await params;
 
     const user = await User.findById(id).select('-password');
     if (!user) {
@@ -70,7 +70,7 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -80,7 +80,7 @@ export async function DELETE(
     }
 
     await connectDB();
-    const { id } = params;
+    const { id } = await params;
 
     // 1. Find all complaints for this user to get their IDs
     const complaints = await Complaint.find({ userId: id });
