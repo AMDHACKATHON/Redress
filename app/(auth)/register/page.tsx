@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Shield, ArrowRight, Eye, EyeOff, Check, X } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Check, X } from 'lucide-react';
+import { signIn } from 'next-auth/react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
-import { AuthResponse } from '@/types';
 import { MinimalFooter } from '@/components/MinimalFooter';
 import { Navbar } from '@/components/Navbar';
 
@@ -15,13 +15,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const { setLoading, isLoading } = useStore();
   const [showPassword, setShowPassword] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem('redress_access_token');
-    if (token) {
-      router.push('/dashboard');
-    }
-  }, [router]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -48,14 +41,28 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await api.post<AuthResponse>('auth/register', {
+      // 1. Register via custom API
+      await api.post('auth/register', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
       });
 
-      toast.success('Account created successfully! Please sign in.');
-      router.push('/login');
+      // 2. Automatically sign in with NextAuth after successful registration
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (result?.error) {
+        toast.success('Account created! Please sign in.');
+        router.push('/login');
+      } else {
+        toast.success('Welcome to Redress!');
+        router.push('/dashboard');
+        router.refresh();
+      }
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail ||
@@ -77,7 +84,6 @@ export default function RegisterPage() {
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 mt-20">
-
         <h1 className="text-center text-2xl font-bold tracking-tight mb-1">
           Create your account
         </h1>

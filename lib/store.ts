@@ -61,8 +61,6 @@ export const useStore = create<AppState>((set) => ({
     set({ isLoading }),
 
   logout: () => {
-    localStorage.removeItem('redress_access_token');
-    localStorage.removeItem('redress_refresh_token');
     set({ 
       user: null, 
       isAuthenticated: false, 

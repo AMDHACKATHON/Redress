@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, User, LogOut, Shield, Menu, X } from 'lucide-react';
+import { Home, User, LogOut, Shield, Menu, X, Loader2 } from 'lucide-react';
+import { useSession, signOut } from 'next-auth/react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { MinimalFooter } from '@/components/MinimalFooter';
@@ -14,42 +15,39 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const { user, setUser, logout } = useStore();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('redress_access_token');
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    } else if (status === 'authenticated' && !user) {
+      fetchUser();
+    }
+  }, [status, user, router]);
 
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      try {
-        const response = await api.get('auth/me');
-        setUser(response.data);
-        setIsCheckingAuth(false);
-      } catch (error) {
-        localStorage.removeItem('redress_access_token');
-        localStorage.removeItem('redress_refresh_token');
-        router.push('/login');
-      }
-    };
-
-    checkAuth();
-  }, [router, setUser]);
-
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
+  const fetchUser = async () => {
+    try {
+      const response = await api.get('auth/me');
+      setUser(response.data);
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+    }
   };
 
-  if (isCheckingAuth) {
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/login' });
+  };
+
+  if (status === 'loading') {
     return <Loader />;
+  }
+
+  if (status === 'unauthenticated') {
+    return null;
   }
 
   const navItems = [
@@ -114,10 +112,10 @@ export default function DashboardLayout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">
-                  {user?.name}
+                  {user?.name || session?.user?.name}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-500 truncate">
-                  {user?.email}
+                  {user?.email || session?.user?.email}
                 </p>
               </div>
             </div>
@@ -170,8 +168,8 @@ export default function DashboardLayout({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-base font-semibold truncate text-white">{user?.name}</p>
-                    <p className="text-sm text-slate-400 truncate">{user?.email}</p>
+                    <p className="text-base font-semibold truncate text-white">{user?.name || session?.user?.name}</p>
+                    <p className="text-sm text-slate-400 truncate">{user?.email || session?.user?.email}</p>
                   </div>
                 </div>
                 
