@@ -11,8 +11,8 @@ export function Navbar() {
   const isRegisterPage = pathname === '/register';
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4">
-      <div className="max-w-7xl mx-auto flex items-center justify-between glass-card rounded-2xl px-6 py-3">
+    <nav className="fixed top-0 left-0 right-0 z-50 md:px-6 md:py-4">
+      <div className="max-w-7xl mx-auto flex items-center justify-between glass-card rounded-none md:rounded-2xl px-6 py-3.5 md:py-3 border-x-0 border-t-0 md:border-x md:border-t">
         <Link href="/" className="flex items-center space-x-2">
           <img src="/assets/logo.png" alt="Redress Logo" className="w-8 h-8 object-contain" />
           <span className="text-xl font-bold tracking-tight text-white">Redress</span>
