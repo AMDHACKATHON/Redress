@@ -4,8 +4,19 @@ import { connectDB } from '@/lib/mongodb';
 import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
+import User from '@/lib/models/User';
 import { searchRegulator } from '@/lib/search';
 import { applySenderName } from '@/lib/letter-utils';
+
+function buildSenderBlock(name: string, address: string, country: string): string {
+  const lines: string[] = [];
+  if (name) lines.push(`- Sender's name: ${name}`);
+  if (address) lines.push(`- Sender's address: ${address}`);
+  if (country) lines.push(`- Sender's country: ${country}`);
+  return lines.length
+    ? lines.join('\n')
+    : '- (No sender address provided — skip the sender address block entirely)';
+}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -110,18 +121,41 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('Extraction/Search failed, proceeding without it:', e);
     }
 
-    const senderName = userSession.name || '';
+    const senderUser = await User.findById(userSession.id).select('name address country');
+    const senderName = (senderUser?.name || userSession.name || '').trim();
+    const senderAddress = (senderUser?.address || '').trim();
+    const senderCountry = (senderUser?.country || '').trim();
+    const senderBlockHints = buildSenderBlock(senderName, senderAddress, senderCountry);
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
     let systemPrompt = `You are a professional legal letter writer. Based on the complaint conversation provided, write a formal complaint letter.
 
-The letter must include:
-- Today's date
-- A formal salutation
-- A clear description of the issue
-- What resolution the complainant is requesting
-- A deadline of 14 days for response
-- A professional closing signed off with the sender's name${senderName ? `: "${senderName}"` : ''}
+Format the letter using this exact structure, with a single blank line between each section:
 
-Do NOT use placeholders like [Your Name] in the signature — write the actual name above.
+1. SENDER ADDRESS BLOCK (top-left of the letter):
+${senderBlockHints}
+
+2. DATE: ${today}
+
+3. RECIPIENT BLOCK:
+- Recipient title and organization (e.g. "Customer Service Manager, Acme Corp.")
+- If commonly known, include the organization's headquarters city/country on the next line
+- Do NOT invent a fake street address or postal code
+
+4. SALUTATION (e.g. "Dear Customer Service Manager,")
+
+5. BODY:
+- A clear description of the issue
+- What resolution is requested
+- A 14-day response deadline
+
+6. CLOSING ("Sincerely," or "Yours faithfully,") followed by the signature line${senderName ? `: ${senderName}` : ''}
+
+Critical rules:
+- Use \\n for line breaks within a block, and \\n\\n for blank lines between sections.
+- Do NOT use placeholders like [Your Name], [Your Address], [Your Email], [Your Phone]. Only include real provided values.
+- If a piece of sender info is missing, OMIT that line entirely — do not write a placeholder.
+- Sign off with the actual name above, not a placeholder.
 
 Also identify:
 - The recipient title and organization
@@ -137,13 +171,16 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
 {
   "letter": "full letter text here",
   "recipient": "Customer Service Manager, [Organization]",
+  "recipient_contact": "<the company's customer service email if commonly known (e.g. support@digitalocean.com), otherwise null>",
   "channel": "email",
   "regulator": {
     "name": "regulator name",
     "contact": "regulator contact",
     "country": "country"
   }
-}`;
+}
+
+For "recipient_contact": only include a real email address you are confident about (e.g. well-known company support inbox). If you are not sure, return null — do not invent or guess email addresses.`;
 
     let aiResponseContent = '';
     try {
@@ -187,17 +224,44 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
     }
 
     const finalLetterText = applySenderName(parsedLetter.letter, senderName);
+    const recipientContact = (() => {
+      const v = parsedLetter.recipient_contact;
+      if (!v || typeof v !== 'string') return null;
+      const trimmed = v.trim();
+      if (!trimmed || /^null$/i.test(trimmed)) return null;
+      return trimmed;
+    })();
 
     // Save to MongoDB
     const letter = await Letter.create({
       complaintId: id,
       letter: finalLetterText,
       recipient: parsedLetter.recipient,
+      recipientContact,
       channel: parsedLetter.channel,
       regulatorName: parsedLetter.regulator.name,
       regulatorContact: parsedLetter.regulator.contact,
       regulatorCountry: parsedLetter.regulator.country
     });
+
+    // Drop a confirmation message into the chat so the agent acknowledges the letter
+    const firstName = senderName.split(/\s+/)[0] || '';
+    const greet = firstName ? `${firstName}, your` : 'Your';
+    const emailHint = recipientContact
+      ? ` If you'd rather send it manually, the recipient's email is ${recipientContact}.`
+      : '';
+    const confirmation =
+      `${greet} formal complaint letter is ready and addressed to ${parsedLetter.recipient}. ` +
+      `You can review it in the preview, hit Send via Gmail, or download it as a PDF.${emailHint}`;
+    try {
+      await Message.create({
+        complaintId: id,
+        role: 'agent',
+        content: confirmation,
+      });
+    } catch (e) {
+      console.error('Failed to save confirmation message:', e);
+    }
 
     // Update complaint
     complaint.letterGenerated = true;

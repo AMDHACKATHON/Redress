@@ -6,6 +6,7 @@ export interface User {
   name: string;
   avatar: string | null;
   country: string | null;
+  address: string | null;
   complaint_count: number;
   created_at: string;
 }
@@ -35,6 +36,7 @@ export interface Letter {
   complaintId: string;
   letter: string;
   recipient: string;
+  recipientContact: string | null;
   channel: string;
   regulatorName: string;
   regulatorContact: string;

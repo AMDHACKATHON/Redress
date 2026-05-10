@@ -28,6 +28,7 @@ interface ProfileResponse {
   email: string;
   avatar: string | null;
   country: string | null;
+  address: string | null;
   complaintCount?: number;
   complaint_count?: number;
   createdAt?: string;
@@ -41,6 +42,7 @@ function normalize(p: ProfileResponse) {
     email: p.email || '',
     avatar: p.avatar || null,
     country: p.country || '',
+    address: p.address || '',
     complaintCount: p.complaintCount ?? p.complaint_count ?? 0,
     createdAt: p.createdAt || p.created_at || '',
   };
@@ -96,6 +98,7 @@ export default function ProfilePage() {
 
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
+  const [address, setAddress] = useState('');
   const [avatar, setAvatar] = useState('');
   const [email, setEmail] = useState('');
   const [complaintCount, setComplaintCount] = useState(0);
@@ -111,6 +114,7 @@ export default function ProfilePage() {
         setName(p.name);
         setEmail(p.email);
         setCountry(p.country || '');
+        setAddress(p.address || '');
         setAvatar(p.avatar || '');
         setComplaintCount(p.complaintCount);
         setCreatedAt(p.createdAt);
@@ -129,6 +133,7 @@ export default function ProfilePage() {
     !!user &&
     (name !== (user.name || '') ||
       country !== (user.country || '') ||
+      address !== ((user as any).address || '') ||
       avatar !== (user.avatar || ''));
 
   const handleSave = async (e: React.FormEvent) => {
@@ -143,6 +148,7 @@ export default function ProfilePage() {
       await api.patch('profile/update', {
         name: name.trim(),
         country: country.trim() || null,
+        address: address.trim() || null,
         avatar: avatar.trim() || null,
       });
       if (user) {
@@ -150,6 +156,7 @@ export default function ProfilePage() {
           ...user,
           name: name.trim(),
           country: country.trim() || null,
+          address: address.trim() || null,
           avatar: avatar.trim() || null,
         });
       }
@@ -337,13 +344,33 @@ export default function ProfilePage() {
               id="profile-country"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 transition"
+              className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 transition [color-scheme:dark]"
             >
-              <option value="">Select a country</option>
+              <option value="" className="bg-slate-900 text-white">Select a country</option>
               {COUNTRIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c} className="bg-slate-900 text-white">{c}</option>
               ))}
             </select>
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="profile-address"
+              className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 block"
+            >
+              Mailing address
+            </label>
+            <textarea
+              id="profile-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              rows={3}
+              placeholder="Street, city, postal code"
+              className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 transition resize-none"
+            />
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              Used as the sender block at the top of your complaint letters. Leave blank to skip.
+            </p>
           </div>
 
           <div className="space-y-2">

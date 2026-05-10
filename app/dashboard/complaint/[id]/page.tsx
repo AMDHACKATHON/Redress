@@ -291,98 +291,168 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       {/* Right Column: Actions & Letters */}
-      <div className="w-full lg:w-[400px] flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar pb-10">
-        {/* Stage Actions */}
-        <div className="bg-black text-white dark:bg-white dark:text-black p-6 rounded-2xl space-y-4 shadow-xl shadow-black/5 dark:shadow-white/5">
-          <div className="flex items-center space-x-2 opacity-80 text-xs font-bold uppercase tracking-widest">
-            <ShieldAlert size={14} />
+      <RightColumn
+        showGenerateButton={showGenerateButton}
+        showEscalateButton={showEscalateButton}
+        activeComplaint={activeComplaint}
+        letter={letter}
+        escalationLetter={escalationLetter}
+        isGeneratingLetter={isGeneratingLetter}
+        isEscalating={isEscalating}
+        userName={user?.name}
+        onGenerate={handleGenerateLetter}
+        onEscalate={handleEscalate}
+      />
+    </div>
+  );
+}
+
+function RightColumn({
+  showGenerateButton,
+  showEscalateButton,
+  activeComplaint,
+  letter,
+  escalationLetter,
+  isGeneratingLetter,
+  isEscalating,
+  userName,
+  onGenerate,
+  onEscalate,
+}: {
+  showGenerateButton: boolean;
+  showEscalateButton: boolean;
+  activeComplaint: Complaint;
+  letter: Letter | null;
+  escalationLetter: EscalationLetter | null;
+  isGeneratingLetter: boolean;
+  isEscalating: boolean;
+  userName?: string;
+  onGenerate: () => void;
+  onEscalate: () => void;
+}) {
+  const showGenerate =
+    showGenerateButton ||
+    (activeComplaint.stage === 'draft' && !activeComplaint.letterGenerated);
+  const showEscalate =
+    showEscalateButton ||
+    (activeComplaint.stage === 'escalate' && !activeComplaint.escalationGenerated);
+  const showHint =
+    !letter && !showGenerateButton && activeComplaint.stage === 'understand';
+  const hasActions = showGenerate || showEscalate || showHint;
+
+  return (
+    <div className="w-full lg:w-[400px] flex flex-col gap-5 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar pb-10">
+      {hasActions && (
+        <div className="glass-card rounded-2xl p-5 space-y-4">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <ShieldAlert size={12} />
             <span>Resolution Actions</span>
           </div>
-          
-          <div className="space-y-3">
-            {(showGenerateButton || (activeComplaint.stage === 'draft' && !activeComplaint.letterGenerated)) && (
-              <button 
-                onClick={handleGenerateLetter}
+
+          <div className="space-y-2.5">
+            {showGenerate && (
+              <button
+                type="button"
+                onClick={onGenerate}
                 disabled={isGeneratingLetter}
-                className="w-full flex items-center justify-between bg-white/10 dark:bg-black/10 hover:bg-white/20 dark:hover:bg-black/20 p-4 rounded-xl border border-white/20 dark:border-black/20 transition-all group disabled:opacity-50"
+                className="w-full group flex items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20 hover:opacity-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <div className="text-left">
+                <div className="text-left min-w-0">
                   <p className="font-semibold text-sm">Generate Complaint Letter</p>
-                  <p className="text-[10px] opacity-60">Ready to generate</p>
+                  <p className="text-[11px] opacity-80">Ready to generate</p>
                 </div>
-                {isGeneratingLetter ? <Loader2 className="animate-spin" size={18} /> : <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+                {isGeneratingLetter ? (
+                  <Loader2 className="animate-spin shrink-0" size={18} />
+                ) : (
+                  <ChevronRight
+                    size={18}
+                    className="shrink-0 group-hover:translate-x-1 transition-transform"
+                  />
+                )}
               </button>
             )}
 
-            {(showEscalateButton || (activeComplaint.stage === 'escalate' && !activeComplaint.escalationGenerated)) && (
-              <button 
-                onClick={handleEscalate}
+            {showEscalate && (
+              <button
+                type="button"
+                onClick={onEscalate}
                 disabled={isEscalating}
-                className="w-full flex items-center justify-between p-4 rounded-xl border transition-all group disabled:opacity-50 bg-red-500/20 border-red-500/30 hover:bg-red-500/30"
+                className="w-full group flex items-center justify-between gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <div className="text-left">
-                  <p className="font-semibold text-sm text-red-200 dark:text-red-700">Escalate to Regulator</p>
-                  <p className="text-[10px] text-red-300/60 dark:text-red-700/60">Action Required</p>
+                <div className="text-left min-w-0">
+                  <p className="font-semibold text-sm text-red-600 dark:text-red-300">
+                    Escalate to Regulator
+                  </p>
+                  <p className="text-[11px] text-red-500/80 dark:text-red-400/70">
+                    Action required
+                  </p>
                 </div>
-                {isEscalating ? <Loader2 className="animate-spin" size={18} /> : <ShieldAlert size={18} className="text-red-300" />}
+                {isEscalating ? (
+                  <Loader2 className="animate-spin text-red-500 shrink-0" size={18} />
+                ) : (
+                  <ShieldAlert className="text-red-500 shrink-0" size={18} />
+                )}
               </button>
             )}
 
-            {!letter && !showGenerateButton && activeComplaint.stage === 'understand' && (
-              <div className="p-4 bg-white/5 border border-white/10 rounded-xl text-center">
-                <p className="text-xs opacity-60 italic">Your complaint letter will appear here once the agent is ready.</p>
+            {showHint && (
+              <div className="p-4 rounded-xl bg-slate-100/60 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400 italic leading-relaxed">
+                  Your complaint letter will appear here once the agent has enough info.
+                </p>
               </div>
             )}
           </div>
         </div>
+      )}
 
-        {/* Letter Panel */}
-        <div className="space-y-6">
-          {letter && (
-            <div className="space-y-4">
-              <LetterDisplay 
-                title="Formal Complaint Letter"
-                letter={letter.letter}
-                recipient={letter.recipient}
-                channel={letter.channel}
-                regulator={{
-                  name: letter.regulatorName,
-                  contact: letter.regulatorContact,
-                  country: letter.regulatorCountry
-                }}
-              />
-              <PDFDownloadButton
-                letter={letter.letter}
-                userName={user?.name}
-                orgName={letter.recipient}
-                variant="complaint"
-              />
-            </div>
-          )}
-
-          {escalationLetter && (
-            <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <LetterDisplay 
-                title="Escalation to Regulator"
-                letter={escalationLetter.escalationLetter}
-                recipient={escalationLetter.regulatorName}
-                channel="Regulatory Portal"
-                regulator={{
-                  name: escalationLetter.regulatorName,
-                  contact: escalationLetter.regulatorContact,
-                  filing_instructions: escalationLetter.filingInstructions
-                }}
-              />
-              <PDFDownloadButton
-                letter={escalationLetter.escalationLetter}
-                userName={user?.name}
-                orgName={letter?.recipient || escalationLetter.regulatorName}
-                variant="escalation"
-              />
-            </div>
-          )}
+      {letter && (
+        <div className="space-y-3">
+          <LetterDisplay
+            title="Formal Complaint Letter"
+            letter={letter.letter}
+            recipient={letter.recipient}
+            recipientContact={letter.recipientContact}
+            channel={letter.channel}
+            emailSubject={`Formal complaint: ${activeComplaint.summary || 'Service issue'}`}
+            regulator={{
+              name: letter.regulatorName,
+              contact: letter.regulatorContact,
+              country: letter.regulatorCountry,
+            }}
+          />
+          <PDFDownloadButton
+            letter={letter.letter}
+            userName={userName}
+            orgName={letter.recipient}
+            variant="complaint"
+          />
         </div>
-      </div>
+      )}
+
+      {escalationLetter && (
+        <div className="space-y-3">
+          <LetterDisplay
+            title="Escalation to Regulator"
+            letter={escalationLetter.escalationLetter}
+            recipient={escalationLetter.regulatorName}
+            recipientContact={escalationLetter.regulatorContact}
+            channel="Regulatory Portal"
+            emailSubject={`Escalation: ${activeComplaint.summary || 'Unresolved complaint'}`}
+            regulator={{
+              name: escalationLetter.regulatorName,
+              contact: escalationLetter.regulatorContact,
+              filing_instructions: escalationLetter.filingInstructions,
+            }}
+          />
+          <PDFDownloadButton
+            letter={escalationLetter.escalationLetter}
+            userName={userName}
+            orgName={letter?.recipient || escalationLetter.regulatorName}
+            variant="escalation"
+          />
+        </div>
+      )}
     </div>
   );
 }
