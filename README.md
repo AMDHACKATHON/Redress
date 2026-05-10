@@ -49,7 +49,6 @@ If the user indicates their complaint was ignored, the agent generates an escala
 | Auth | NextAuth.js + Google OAuth |
 | Database | MongoDB + Mongoose |
 | State Management | Zustand |
-| LLM | Groq (Llama 3.1 70B) |
 | Web Search | Tavily |
 | PDF Generation | jsPDF |
 | Deployment | Vercel + HuggingFace Spaces |
@@ -143,7 +142,7 @@ types/
 | Name | Role | GitHub |
 |---|---|---|
 | Ezekiel Samuel | Lead Engineer | [@samkiell](https://github.com/samkiell) |
-| Zabdiel Anyaogu | Frontend + Demo | — |
+| Zabdiel Anyaogu | Frontend + Demo |  [@fwesh](https://github.com/fwesh001) |
 
 ---
 
