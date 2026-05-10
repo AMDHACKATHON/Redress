@@ -1,54 +1,9 @@
-import { SignJWT, jwtVerify } from 'jose';
 import { NextAuthOptions, getServerSession } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
-
-const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'fallback-secret');
-
-const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY = '7d';
-
-export interface TokenPayload {
-  userId: string;
-  email: string;
-  type: 'access' | 'refresh';
-}
-
-export async function signAccessToken(userId: string, email: string): Promise<string> {
-  return new SignJWT({ userId, email, type: 'access' })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(ACCESS_TOKEN_EXPIRY)
-    .sign(SECRET);
-}
-
-export async function signRefreshToken(userId: string, email: string): Promise<string> {
-  return new SignJWT({ userId, email, type: 'refresh' })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(REFRESH_TOKEN_EXPIRY)
-    .sign(SECRET);
-}
-
-export async function verifyToken(token: string): Promise<TokenPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    return payload as unknown as TokenPayload;
-  } catch {
-    return null;
-  }
-}
-
-export async function getAuthUser(authHeader: string | null): Promise<TokenPayload | null> {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-  const token = authHeader.replace('Bearer ', '');
-  const payload = await verifyToken(token);
-  if (!payload || payload.type !== 'access') return null;
-  return payload;
-}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -138,24 +93,13 @@ export const authOptions: NextAuthOptions = {
   }
 };
 
-export async function getSessionUser(req?: Request) {
+export async function getSessionUser(_req?: Request) {
   const session = await getServerSession(authOptions);
   if (session?.user) {
-    return { 
-      id: (session.user as any).id as string, 
-      email: session.user.email as string 
+    return {
+      id: (session.user as any).id as string,
+      email: session.user.email as string
     };
-  }
-
-  if (req) {
-    const authHeader = req.headers.get('Authorization');
-    const payload = await getAuthUser(authHeader);
-    if (payload) {
-      return { 
-        id: payload.userId, 
-        email: payload.email 
-      };
-    }
   }
 
   return null;

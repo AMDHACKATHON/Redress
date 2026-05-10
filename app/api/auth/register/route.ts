@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
-import { signAccessToken, signRefreshToken } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,10 +41,6 @@ export async function POST(req: NextRequest) {
       password: hashedPassword,
     });
 
-    // Generate tokens
-    const access = await signAccessToken(user._id.toString(), user.email);
-    const refresh = await signRefreshToken(user._id.toString(), user.email);
-
     return NextResponse.json(
       {
         user: {
@@ -57,7 +52,6 @@ export async function POST(req: NextRequest) {
           complaint_count: user.complaintCount,
           created_at: user.createdAt,
         },
-        tokens: { access, refresh },
       },
       { status: 201 }
     );
