@@ -8,16 +8,6 @@ import User from '@/lib/models/User';
 import { searchRegulator } from '@/lib/search';
 import { applySenderName } from '@/lib/letter-utils';
 
-function buildSenderBlock(name: string, address: string, country: string): string {
-  const lines: string[] = [];
-  if (name) lines.push(`- Sender's name: ${name}`);
-  if (address) lines.push(`- Sender's address: ${address}`);
-  if (country) lines.push(`- Sender's country: ${country}`);
-  return lines.length
-    ? lines.join('\n')
-    : '- (No sender address provided — skip the sender address block entirely)';
-}
-
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userSession = await getSessionUser(req);
@@ -125,15 +115,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const senderName = (senderUser?.name || userSession.name || '').trim();
     const senderAddress = (senderUser?.address || '').trim();
     const senderCountry = (senderUser?.country || '').trim();
-    const senderBlockHints = buildSenderBlock(senderName, senderAddress, senderCountry);
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const senderInfoLines: string[] = [];
+    if (senderName) senderInfoLines.push(`- name = ${senderName}`);
+    if (senderAddress) senderInfoLines.push(`- address = ${senderAddress}`);
+    if (senderCountry) senderInfoLines.push(`- country = ${senderCountry}`);
+    const senderInfoBlock = senderInfoLines.length
+      ? senderInfoLines.join('\n')
+      : '- (no sender info on file — extract any sender address mentioned in the conversation; otherwise use only the name from the conversation)';
 
     let systemPrompt = `You are a professional legal letter writer. Based on the complaint conversation provided, write a formal complaint letter.
 
-Format the letter using this exact structure, with a single blank line between each section:
+SENDER INFO (use these exact values, do not paraphrase):
+${senderInfoBlock}
 
-1. SENDER ADDRESS BLOCK (top-left of the letter):
-${senderBlockHints}
+Format the letter using this EXACT structure, with one blank line between each section:
+
+1. SENDER ADDRESS BLOCK at the top-left. This block is REQUIRED. Render the sender info above as separate lines in this order:
+   <sender name>
+   <sender address>     (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
+   <sender country>     (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
+   Never write "[Your Address]" or any other placeholder. If a value is missing, just leave that line out — never include a bracketed placeholder.
 
 2. DATE: ${today}
 
@@ -149,13 +152,12 @@ ${senderBlockHints}
 - What resolution is requested
 - A 14-day response deadline
 
-6. CLOSING ("Sincerely," or "Yours faithfully,") followed by the signature line${senderName ? `: ${senderName}` : ''}
+6. CLOSING ("Sincerely," or "Yours faithfully,") followed on a new line by the actual sender name${senderName ? `: ${senderName}` : ''}.
 
 Critical rules:
-- Use \\n for line breaks within a block, and \\n\\n for blank lines between sections.
-- Do NOT use placeholders like [Your Name], [Your Address], [Your Email], [Your Phone]. Only include real provided values.
-- If a piece of sender info is missing, OMIT that line entirely — do not write a placeholder.
-- Sign off with the actual name above, not a placeholder.
+- Use \\n for line breaks within a block, and \\n\\n between sections.
+- ABSOLUTELY NO placeholders such as [Your Name], [Your Address], [Your Email], [Your Phone], [Your City], [Your State], [Your Zip Code]. If a value is unknown, omit the line.
+- Use the literal name and address values shown above — copy them verbatim.
 
 Also identify:
 - The recipient title and organization
