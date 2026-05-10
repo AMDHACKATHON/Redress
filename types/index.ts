@@ -1,4 +1,4 @@
-export type Stage = 'understand' | 'draft' | 'escalate';
+export type Stage = 'understand' | 'draft' | 'escalate' | 'resolved';
 
 export interface User {
   id: string;
@@ -20,6 +20,7 @@ export interface Complaint {
   escalationGenerated: boolean;
   complaintType: string | null;
   country: string | null;
+  resolvedAt: string | null;
   createdAt: string;
 }
 
@@ -60,7 +61,7 @@ export interface AgentReply {
   stage: Stage;
   ready_for_letter: boolean;
   clarifying_questions_done: boolean;
-  action?: 'ready_for_letter' | 'edit_letter' | 'escalate' | null;
+  action?: 'ready_for_letter' | 'edit_letter' | 'escalate' | 'mark_resolved' | null;
   letter?: Letter | null;
   /** The complaint's updated summary — populated when the agent fires ready_for_letter. */
   summary?: string | null;

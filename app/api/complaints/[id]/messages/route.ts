@@ -233,7 +233,7 @@ Sender's name (for any signature): ${fullName || 'unknown'}
 
 ${userContextLine}
 
-The user can do three things in this stage:
+The user can do four things in this stage:
 
 A. Ask follow-up questions about the letter — answer naturally in plain English. No JSON, no markdown bullets.
 
@@ -243,17 +243,30 @@ B. Request EDITS to the letter (e.g. "make paragraph 3 sound more human", "short
 C. Say their complaint was ignored / they want to escalate to a regulator. When this happens, respond with EXACTLY this JSON object and nothing else:
 {"action": "escalate"}
 
+D. Tell you the matter has been resolved or settled (e.g. "they replied and refunded me", "it's settled", "they apologized and sorted it"). When you detect resolution success, respond with EXACTLY this JSON object and nothing else:
+{"action": "mark_resolved"}
+
 CRITICAL OUTPUT RULES — read carefully:
 - Each reply MUST be EITHER plain conversational English OR a single JSON action object. NEVER both in the same reply.
 - If you are answering a question or asking for clarification, reply with prose only — no JSON.
 - Only emit a JSON action when your reply contains zero questions and zero prose.
 - JSON signals are never wrapped in markdown code fences. They are raw JSON, alone.`;
-    } else {
+    } else if (complaint.stage === 'escalate') {
       systemPrompt = `You are Redress, the complaint resolution agent. An escalation letter has been sent to the regulator.
 
 ${userContextLine}
 
-Answer the user's questions helpfully and conversationally. No JSON signals are needed in this stage. No markdown bullets.`;
+Answer the user's questions helpfully and conversationally. If the user tells you the matter has been resolved or settled (e.g. "the regulator replied and they refunded me", "it's sorted"), respond with EXACTLY this JSON object and nothing else:
+{"action": "mark_resolved"}
+
+For all other turns, reply in plain conversational English. No markdown bullets, no JSON.`;
+    } else {
+      // resolved
+      systemPrompt = `You are Redress, the complaint resolution agent. This complaint has been marked as resolved.
+
+${userContextLine}
+
+Answer the user's questions warmly and briefly. Don't suggest new escalations or letter edits — the case is closed. No JSON signals are needed in this stage.`;
     }
 
     const conversation = [
@@ -331,6 +344,17 @@ Answer the user's questions helpfully and conversationally. No JSON signals are 
       await complaint.save();
       action = 'escalate';
       displayReply = `Understood${firstName ? `, ${firstName}` : ''}. Click Escalate to Regulator to generate your escalation letter.`;
+    } else if (
+      honorAction &&
+      parsed?.action === 'mark_resolved' &&
+      (complaint.stage === 'draft' || complaint.stage === 'escalate')
+    ) {
+      stage = 'resolved';
+      complaint.stage = 'resolved';
+      complaint.resolvedAt = new Date();
+      await complaint.save();
+      action = 'mark_resolved';
+      displayReply = `Wonderful${firstName ? `, ${firstName}` : ''}. I've marked this complaint as resolved. Glad it worked out — you can always start a fresh complaint from the dashboard if anything else comes up.`;
     } else if (honorAction && parsed?.action === 'edit_letter' && existingLetter) {
       const instructions = (parsed.instructions || '').toString().trim() || 'improve the letter';
       const senderName = userSession.name || '';

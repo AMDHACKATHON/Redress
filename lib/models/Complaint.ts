@@ -3,11 +3,12 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IComplaint extends Document {
   userId: mongoose.Types.ObjectId;
   summary: string | null;
-  stage: 'understand' | 'draft' | 'escalate';
+  stage: 'understand' | 'draft' | 'escalate' | 'resolved';
   letterGenerated: boolean;
   escalationGenerated: boolean;
   complaintType: string | null;
   country: string | null;
+  resolvedAt: Date | null;
   createdAt: Date;
 }
 
@@ -23,8 +24,12 @@ const ComplaintSchema = new Schema<IComplaint>({
   },
   stage: {
     type: String,
-    enum: ['understand', 'draft', 'escalate'],
+    enum: ['understand', 'draft', 'escalate', 'resolved'],
     default: 'understand',
+  },
+  resolvedAt: {
+    type: Date,
+    default: null,
   },
   letterGenerated: {
     type: Boolean,

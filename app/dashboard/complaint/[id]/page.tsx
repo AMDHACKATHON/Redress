@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Send, 
-  ArrowLeft, 
-  Loader2, 
-  MessageSquare, 
+import {
+  Send,
+  ArrowLeft,
+  Loader2,
+  MessageSquare,
   ShieldAlert,
   ChevronRight,
+  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
@@ -16,6 +18,7 @@ import { toast } from 'react-hot-toast';
 import { Message, Complaint, Letter, EscalationLetter, AgentReply } from '@/types';
 import LetterDisplay from '@/components/letter/LetterDisplay';
 import PDFDownloadButton from '@/components/letter/PDFDownloadButton';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 export default function ComplaintDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -35,8 +38,10 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   const [sending, setSending] = useState(false);
   const [isGeneratingLetter, setIsGeneratingLetter] = useState(false);
   const [isEscalating, setIsEscalating] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   const [showGenerateButton, setShowGenerateButton] = useState(false);
   const [showEscalateButton, setShowEscalateButton] = useState(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     fetchComplaintData();
@@ -141,6 +146,10 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
         toast.success('Letter updated');
       }
 
+      if (stage === 'resolved' && activeComplaint?.stage !== 'resolved') {
+        toast.success('Complaint marked as resolved');
+      }
+
     } catch (error) {
       toast.error('Failed to send message');
     } finally {
@@ -182,6 +191,51 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
     }
   };
 
+  const handleMarkResolved = async () => {
+    const ok = await confirm({
+      title: 'Mark this complaint as resolved?',
+      description:
+        'This closes the case. The chat stays available for reference, and you can reopen the complaint later if anything else comes up.',
+      confirmLabel: 'Mark resolved',
+    });
+    if (!ok) return;
+    setIsResolving(true);
+    try {
+      const response = await api.post<Complaint>(`complaints/${id}/resolve`);
+      if (activeComplaint) {
+        setActiveComplaint({
+          ...activeComplaint,
+          stage: 'resolved',
+          resolvedAt: response.data.resolvedAt,
+        });
+      }
+      toast.success('Complaint marked as resolved');
+    } catch (error) {
+      toast.error('Failed to mark as resolved');
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    setIsResolving(true);
+    try {
+      const response = await api.delete<Complaint>(`complaints/${id}/resolve`);
+      if (activeComplaint) {
+        setActiveComplaint({
+          ...activeComplaint,
+          stage: response.data.stage,
+          resolvedAt: null,
+        });
+      }
+      toast.success('Complaint reopened');
+    } catch (error) {
+      toast.error('Failed to reopen');
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
   if (isLoading && !activeComplaint) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh]">
@@ -212,8 +266,10 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
               </h2>
               <div className="flex items-center space-x-2">
                 <span className={`h-2 w-2 rounded-full ${
-                  activeComplaint.stage === 'understand' ? 'bg-blue-500' : 
-                  activeComplaint.stage === 'draft' ? 'bg-yellow-500' : 'bg-red-500'
+                  activeComplaint.stage === 'understand' ? 'bg-blue-500' :
+                  activeComplaint.stage === 'draft' ? 'bg-yellow-500' :
+                  activeComplaint.stage === 'escalate' ? 'bg-red-500' :
+                  'bg-emerald-500'
                 }`}></span>
                 <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">
                   {activeComplaint.stage} Stage
@@ -303,9 +359,12 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
         escalationLetter={escalationLetter}
         isGeneratingLetter={isGeneratingLetter}
         isEscalating={isEscalating}
+        isResolving={isResolving}
         userName={user?.name}
         onGenerate={handleGenerateLetter}
         onEscalate={handleEscalate}
+        onMarkResolved={handleMarkResolved}
+        onReopen={handleReopen}
       />
     </div>
   );
@@ -319,9 +378,12 @@ function RightColumn({
   escalationLetter,
   isGeneratingLetter,
   isEscalating,
+  isResolving,
   userName,
   onGenerate,
   onEscalate,
+  onMarkResolved,
+  onReopen,
 }: {
   showGenerateButton: boolean;
   showEscalateButton: boolean;
@@ -330,19 +392,29 @@ function RightColumn({
   escalationLetter: EscalationLetter | null;
   isGeneratingLetter: boolean;
   isEscalating: boolean;
+  isResolving: boolean;
   userName?: string;
   onGenerate: () => void;
   onEscalate: () => void;
+  onMarkResolved: () => void;
+  onReopen: () => void;
 }) {
+  const isResolved = activeComplaint.stage === 'resolved';
   const showGenerate =
-    showGenerateButton ||
-    (activeComplaint.stage === 'draft' && !activeComplaint.letterGenerated);
+    !isResolved &&
+    (showGenerateButton ||
+      (activeComplaint.stage === 'draft' && !activeComplaint.letterGenerated));
   const showEscalate =
-    showEscalateButton ||
-    (activeComplaint.stage === 'escalate' && !activeComplaint.escalationGenerated);
+    !isResolved &&
+    (showEscalateButton ||
+      (activeComplaint.stage === 'escalate' && !activeComplaint.escalationGenerated));
   const showHint =
     !letter && !showGenerateButton && activeComplaint.stage === 'understand';
-  const hasActions = showGenerate || showEscalate || showHint;
+  const showMarkResolved =
+    !isResolved &&
+    activeComplaint.letterGenerated &&
+    (activeComplaint.stage === 'draft' || activeComplaint.stage === 'escalate');
+  const hasActions = showGenerate || showEscalate || showHint || showMarkResolved || isResolved;
 
   return (
     <div className="w-full lg:w-[400px] flex flex-col gap-5 overflow-y-auto pr-0 lg:pr-2 custom-scrollbar pb-10">
@@ -405,6 +477,64 @@ function RightColumn({
                   Your complaint letter will appear here once the agent has enough info.
                 </p>
               </div>
+            )}
+
+            {showMarkResolved && (
+              <button
+                type="button"
+                onClick={onMarkResolved}
+                disabled={isResolving}
+                className="w-full group flex items-center justify-between gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <div className="text-left min-w-0">
+                  <p className="font-semibold text-sm text-emerald-600 dark:text-emerald-300">
+                    Mark as Resolved
+                  </p>
+                  <p className="text-[11px] text-emerald-500/80 dark:text-emerald-400/70">
+                    Close this case
+                  </p>
+                </div>
+                {isResolving ? (
+                  <Loader2 className="animate-spin text-emerald-500 shrink-0" size={18} />
+                ) : (
+                  <CheckCircle2 className="text-emerald-500 shrink-0" size={18} />
+                )}
+              </button>
+            )}
+
+            {isResolved && (
+              <>
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-3">
+                  <CheckCircle2 className="text-emerald-500 shrink-0 mt-0.5" size={18} />
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                      Resolved
+                    </p>
+                    <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/70 leading-relaxed">
+                      {activeComplaint.resolvedAt
+                        ? `Closed on ${new Date(activeComplaint.resolvedAt).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}.`
+                        : 'This complaint has been closed.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onReopen}
+                  disabled={isResolving}
+                  className="w-full inline-flex items-center justify-center gap-2 p-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100/60 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:bg-slate-200/60 dark:hover:bg-white/5 transition disabled:opacity-60"
+                >
+                  {isResolving ? (
+                    <Loader2 className="animate-spin" size={14} />
+                  ) : (
+                    <RotateCcw size={14} />
+                  )}
+                  Reopen complaint
+                </button>
+              </>
             )}
           </div>
         </div>
