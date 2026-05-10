@@ -4,10 +4,12 @@ import { connectDB } from '@/lib/mongodb';
 import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
+import User from '@/lib/models/User';
+import { applySenderName } from '@/lib/letter-utils';
 
 const AMD_API_URL = process.env.AMD_API_URL;
 const AMD_API_KEY = process.env.AMD_API_KEY;
-const MODEL = 'meta-llama/Llama-3.1-405B-Instruct';
+const MODEL = 'llama-3.3-70b-versatile';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -33,25 +35,58 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
     const historyText = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
 
-    const prompt = `Generate a formal complaint letter based on the conversation history below. 
+    const senderUser = await User.findById(userSession.id).select('name address country');
+    const senderName = (senderUser?.name || userSession.name || '').trim();
+    const senderAddress = (senderUser?.address || '').trim();
+    const senderCountry = (senderUser?.country || '').trim();
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const senderLines: string[] = [];
+    if (senderName) senderLines.push(`- Sender's name: ${senderName}`);
+    if (senderAddress) senderLines.push(`- Sender's address: ${senderAddress}`);
+    if (senderCountry) senderLines.push(`- Sender's country: ${senderCountry}`);
+    const senderBlockHints = senderLines.length
+      ? senderLines.join('\n')
+      : '- (No sender info provided — skip the sender address block)';
+
+    const prompt = `Generate a formal complaint letter based on the conversation history below.
 Return ONLY a JSON object with no other text.
 
 Conversation History:
 ${historyText}
 
+The "letter" field must follow this structure exactly, with a blank line between each section:
+
+1. SENDER ADDRESS BLOCK at the top-left:
+${senderBlockHints}
+
+2. DATE: ${today}
+
+3. RECIPIENT BLOCK: title and organization (and HQ location if commonly known). Do NOT invent a fake street address.
+
+4. SALUTATION (e.g. "Dear Customer Service Manager,")
+
+5. BODY: clear description of the issue, resolution requested, 14-day response deadline.
+
+6. CLOSING ("Sincerely,") then signature line${senderName ? `: ${senderName}` : ''}.
+
+Use \\n for line breaks within a block, and \\n\\n for blank lines between sections. Do NOT use placeholders like [Your Name], [Your Address], [Your Email] — omit any line whose value is missing.
+
 Return ONLY a JSON object in this format:
 {
-  "letter": "<full letter text, paragraphs separated by \\n\\n>",
+  "letter": "<full letter text>",
   "recipient": "<who it's addressed to>",
+  "recipientContact": "<the company's customer service email if commonly known, else null>",
   "channel": "<how to send it>",
   "regulatorName": "<relevant regulatory body>",
   "regulatorContact": "<regulator email or website>",
   "regulatorCountry": "<country>"
 }
-Today's date: ${new Date().toLocaleDateString()}. Formal tone. Include response deadline of 14 days. Sign off as [Your Name].
+
+For "recipientContact": only include a real email address you are confident about. If unsure, return null — do not invent emails.
 No markdown, no explanation. Pure JSON only.`;
 
-    const response = await fetch(`${AMD_API_URL}/chat/completions`, {
+    const response = await fetch(AMD_API_URL!, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,6 +96,7 @@ No markdown, no explanation. Pure JSON only.`;
         model: MODEL,
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
+        response_format: { type: 'json_object' },
       }),
     });
 
@@ -75,6 +111,13 @@ No markdown, no explanation. Pure JSON only.`;
     content = content.replace(/^```json/, '').replace(/```$/, '').trim();
 
     const parsedLetter = JSON.parse(content);
+    parsedLetter.letter = applySenderName(parsedLetter.letter, senderName);
+    if (parsedLetter.recipientContact) {
+      const v = String(parsedLetter.recipientContact).trim();
+      parsedLetter.recipientContact = v && !/^null$/i.test(v) ? v : null;
+    } else {
+      parsedLetter.recipientContact = null;
+    }
 
     // Save to Letter collection
     const letter = await Letter.create({

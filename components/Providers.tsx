@@ -3,6 +3,7 @@
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "react-hot-toast";
+import { ConfirmProvider } from "@/components/ui/ConfirmDialog";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -14,13 +15,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
         enableSystem={false}
         disableTransitionOnChange
       >
-        {children}
-        <Toaster
-          position="bottom-right"
-          toastOptions={{
-            className: 'hot-toast-custom',
-          }}
-        />
+        <ConfirmProvider>
+          {children}
+          <Toaster
+            position="bottom-right"
+            toastOptions={{
+              className: 'hot-toast-custom',
+            }}
+          />
+        </ConfirmProvider>
       </ThemeProvider>
     </SessionProvider>
   );

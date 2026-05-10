@@ -4,6 +4,7 @@ export interface ILetter extends Document {
   complaintId: mongoose.Types.ObjectId;
   letter: string;
   recipient: string;
+  recipientContact: string | null;
   channel: string;
   regulatorName: string;
   regulatorContact: string;
@@ -25,6 +26,10 @@ const LetterSchema = new Schema<ILetter>({
   recipient: {
     type: String,
     required: [true, 'Recipient is required'],
+  },
+  recipientContact: {
+    type: String,
+    default: null,
   },
   channel: {
     type: String,

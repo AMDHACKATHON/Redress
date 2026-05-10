@@ -5,7 +5,9 @@ import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
 import EscalationLetter from '@/lib/models/EscalationLetter';
+import User from '@/lib/models/User';
 import { searchRegulator } from '@/lib/search';
+import { applySenderName } from '@/lib/letter-utils';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -86,14 +88,49 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('Search failed, proceeding without it:', e);
     }
 
+    const senderUser = await User.findById(userSession.id).select('name address country');
+    const senderName = (senderUser?.name || userSession.name || '').trim();
+    const senderAddress = (senderUser?.address || '').trim();
+    const senderCountry = (senderUser?.country || '').trim();
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const senderLines: string[] = [];
+    if (senderName) senderLines.push(`- Sender's name: ${senderName}`);
+    if (senderAddress) senderLines.push(`- Sender's address: ${senderAddress}`);
+    if (senderCountry) senderLines.push(`- Sender's country: ${senderCountry}`);
+    const senderBlockHints = senderLines.length
+      ? senderLines.join('\n')
+      : '- (No sender address provided — skip the sender address block entirely)';
+
     const systemPrompt = `You are a professional legal letter writer specializing in regulatory complaints. Based on the original complaint letter and conversation provided, write a formal escalation letter addressed to the relevant regulatory body.
 
-The escalation letter must include:
-- Today's date
-- Reference to the original complaint and date it was sent
+Format the escalation letter using this exact structure, with a single blank line between each section:
+
+1. SENDER ADDRESS BLOCK (top-left of the letter):
+${senderBlockHints}
+
+2. DATE: ${today}
+
+3. RECIPIENT BLOCK (the regulator):
+- The regulator's name and the relevant department
+- The regulator's contact (email/website) if known on the next line
+- Do NOT invent a fake street address
+
+4. SALUTATION (e.g. "To Whom It May Concern,")
+
+5. BODY:
+- Reference to the original complaint and the date it was sent
 - The fact that no satisfactory response was received
 - A clear request for regulatory intervention
-- A professional closing
+
+6. CLOSING ("Sincerely," or "Yours faithfully,") followed by the signature line${senderName ? `: ${senderName}` : ''}
+
+Critical rules:
+- Use \\n for line breaks within a block, and \\n\\n for blank lines between sections.
+- Do NOT use placeholders like [Your Name], [Your Address], [Your Email]. Only include real provided values.
+- If a piece of sender info is missing, OMIT that line entirely.
+
+Also provide step-by-step filing instructions for submitting to this regulator.
 
 Also provide step-by-step filing instructions for submitting to this regulator.
 
@@ -123,13 +160,14 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'meta-llama/Llama-3.1-70B-Instruct',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userContent }
           ],
           max_tokens: 2048,
-          temperature: 0.7
+          temperature: 0.7,
+          response_format: { type: 'json_object' }
         })
       });
 
@@ -156,7 +194,7 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
     // Save to MongoDB
     const escalation = await EscalationLetter.create({
       complaintId: id,
-      escalationLetter: parsedEscalation.escalation_letter,
+      escalationLetter: applySenderName(parsedEscalation.escalation_letter, senderName),
       regulatorName: parsedEscalation.regulator.name,
       regulatorContact: parsedEscalation.regulator.contact,
       filingInstructions: parsedEscalation.regulator.filing_instructions

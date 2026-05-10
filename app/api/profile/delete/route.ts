@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import Complaint from '@/lib/models/Complaint';
-import { getAuthUser } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    const payload = await getAuthUser(authHeader);
+    const sessionUser = await getSessionUser(req);
 
-    if (!payload) {
+    if (!sessionUser) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -19,10 +18,10 @@ export async function DELETE(req: NextRequest) {
     await connectDB();
 
     // Delete all complaints associated with this user
-    await Complaint.deleteMany({ userId: payload.userId });
+    await Complaint.deleteMany({ userId: sessionUser.id });
 
     // Delete the user
-    const result = await User.findByIdAndDelete(payload.userId);
+    const result = await User.findByIdAndDelete(sessionUser.id);
 
     if (!result) {
       return NextResponse.json(

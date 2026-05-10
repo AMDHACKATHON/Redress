@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Home, User, LogOut, Shield, Menu, X, Loader2 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
 import { MinimalFooter } from '@/components/MinimalFooter';
 import Loader from '@/components/Loader';
+
+const ADMIN_EMAIL = 'hello@samkiel.dev';
 
 export default function DashboardLayout({
   children,
@@ -20,6 +23,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { user, setUser, logout } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isAdmin = session?.user?.email === ADMIN_EMAIL;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -100,14 +105,17 @@ export default function DashboardLayout({
           <div className="p-3 border-t border-slate-200/50 dark:border-white/5 space-y-2">
             <div className="flex items-center space-x-3 px-3 py-2">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 overflow-hidden shrink-0">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
+                {user?.avatar || session?.user?.image ? (
+                  <Image
+                    src={(user?.avatar || session?.user?.image) as string}
+                    alt={user?.name || session?.user?.name || 'User'}
+                    width={36}
+                    height={36}
                     className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
-                  user?.name?.charAt(0)?.toUpperCase() || 'U'
+                  (user?.name || session?.user?.name)?.charAt(0)?.toUpperCase() || 'U'
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -119,6 +127,21 @@ export default function DashboardLayout({
                 </p>
               </div>
             </div>
+            
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  pathname === '/admin'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20'
+                    : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10'
+                }`}
+              >
+                <Shield size={18} />
+                <span>Admin Panel</span>
+              </Link>
+            )}
+
             <button
               onClick={handleLogout}
               className="flex items-center space-x-3 w-full px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
@@ -161,10 +184,17 @@ export default function DashboardLayout({
               <div className="glass-card rounded-2xl p-4 flex flex-col space-y-4 shadow-2xl border border-white/10">
                 <div className="flex items-center space-x-3 p-3 bg-white/5 rounded-xl border border-white/5">
                   <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-lg font-bold text-indigo-400 overflow-hidden shrink-0">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                    {user?.avatar || session?.user?.image ? (
+                      <Image 
+                        src={(user?.avatar || session?.user?.image) as string} 
+                        alt={user?.name || session?.user?.name || 'User'} 
+                        width={48}
+                        height={48}
+                        className="h-full w-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
-                      user?.name?.charAt(0)?.toUpperCase() || 'U'
+                      (user?.name || session?.user?.name)?.charAt(0)?.toUpperCase() || 'U'
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -172,6 +202,17 @@ export default function DashboardLayout({
                     <p className="text-sm text-slate-400 truncate">{user?.email || session?.user?.email}</p>
                   </div>
                 </div>
+
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center justify-center space-x-2 w-full p-4 text-sm font-bold text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-xl transition-all border border-indigo-500/10"
+                  >
+                    <Shield size={18} />
+                    <span>Admin Dashboard</span>
+                  </Link>
+                )}
                 
                 <button
                   onClick={handleLogout}

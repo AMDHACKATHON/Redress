@@ -6,6 +6,7 @@ export interface User {
   name: string;
   avatar: string | null;
   country: string | null;
+  address: string | null;
   complaint_count: number;
   created_at: string;
 }
@@ -35,6 +36,7 @@ export interface Letter {
   complaintId: string;
   letter: string;
   recipient: string;
+  recipientContact: string | null;
   channel: string;
   regulatorName: string;
   regulatorContact: string;
@@ -58,6 +60,8 @@ export interface AgentReply {
   stage: Stage;
   ready_for_letter: boolean;
   clarifying_questions_done: boolean;
+  action?: 'ready_for_letter' | 'edit_letter' | 'escalate' | null;
+  letter?: Letter | null;
 }
 
 export interface AuthTokens {

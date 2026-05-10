@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongodb';
 import User from '@/lib/models/User';
-import { getAuthUser } from '@/lib/auth';
+import { getSessionUser } from '@/lib/auth';
 
 export async function PATCH(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    const payload = await getAuthUser(authHeader);
+    const sessionUser = await getSessionUser(req);
 
-    if (!payload) {
+    if (!sessionUser) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -17,7 +16,7 @@ export async function PATCH(req: NextRequest) {
 
     await connectDB();
 
-    const user = await User.findById(payload.userId);
+    const user = await User.findById(sessionUser.id);
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -26,7 +25,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, avatar, country } = body;
+    const { name, avatar, country, address } = body;
 
     // Update fields if provided
     if (name !== undefined) {
@@ -38,6 +37,9 @@ export async function PATCH(req: NextRequest) {
     if (country !== undefined) {
       user.country = country;
     }
+    if (address !== undefined) {
+      user.address = address;
+    }
 
     await user.save();
 
@@ -47,6 +49,7 @@ export async function PATCH(req: NextRequest) {
       email: user.email,
       avatar: user.avatar,
       country: user.country,
+      address: user.address,
       complaint_count: user.complaintCount,
       created_at: user.createdAt,
     });
