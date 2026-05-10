@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/mongodb';
 import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
+import User from '@/lib/models/User';
 import { applySenderName } from '@/lib/letter-utils';
 
 const AMD_API_URL = process.env.AMD_API_URL!;
@@ -109,9 +110,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ? null
         : await Letter.findOne({ complaintId: id });
 
-    // Build user context for the agent
-    const fullName = (userSession.name || '').trim();
+    // Look up the user record so the agent knows what's already on file
+    const userRecord = await User.findById(userSession.id).select('name address country');
+    const fullName = ((userRecord?.name || userSession.name || '') as string).trim();
     const firstName = fullName.split(/\s+/)[0] || '';
+    const senderAddress = (userRecord?.address || '').trim();
+    const senderCountry = (userRecord?.country || '').trim();
+
+    const knownProfile: string[] = [];
+    if (fullName) knownProfile.push(`Name: ${fullName}`);
+    if (senderAddress) knownProfile.push(`Address: ${senderAddress}`);
+    if (senderCountry) knownProfile.push(`Country: ${senderCountry}`);
+    const profileBlock = knownProfile.length
+      ? knownProfile.join('\n')
+      : '(no profile info on file)';
+
+    const missingFields: string[] = [];
+    if (!senderAddress) missingFields.push('mailing address');
+    if (!senderCountry) missingFields.push('country');
+
     const userContextLine = fullName
       ? `You are speaking with ${fullName}${firstName && firstName !== fullName ? ` (first name: ${firstName})` : ''}. Address them by their first name when it feels natural — but don't force it into every reply.`
       : `You don't yet know the user's name. If it comes up naturally, you can ask, otherwise don't.`;
@@ -119,17 +136,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Stage-specific system prompt
     let systemPrompt = '';
     if (complaint.stage === 'understand') {
+      const missingClause = missingFields.length
+        ? `IMPORTANT: the user's ${missingFields.join(' and ')} ${missingFields.length === 1 ? 'is' : 'are'} not on file. Before emitting the ready_for_letter signal, ask once for the missing piece(s) so the letter can include a proper sender block. Phrase it naturally — e.g. "What address should I put at the top of the letter?" Do NOT ask if the info is already on file.`
+        : 'The user already has their address and country on file — do NOT ask for these again.';
+
       systemPrompt = `You are Redress, an AI complaint resolution agent. Your job is to help users draft formal complaint letters and escalate to regulators if needed.
 
 ${userContextLine}
 
+Profile on file:
+${profileBlock}
+
+${missingClause}
+
 Rules:
-1. Ask at most 3 short clarifying questions to gather: the organization name, what happened, the country, the date, and what outcome the user wants.
-2. Once you have enough information, respond with EXACTLY this JSON object and nothing else:
-{"action": "ready_for_letter", "summary": "<one sentence summary of the complaint>", "complaint_type": "<bank|telco|utility|landlord|government|other>", "country": "<country name>"}
-3. If the user says their complaint was ignored or rejected, respond with EXACTLY this JSON object and nothing else:
+1. Gather: the organization name, what happened, the country, the date, what outcome the user wants — plus the sender's mailing address if not already on file.
+2. Keep it tight: at most 3 short clarifying questions total. Combine related questions when possible.
+3. Once you have enough information, respond with EXACTLY this JSON object and nothing else:
+{"action": "ready_for_letter", "summary": "<one sentence summary of the complaint>", "complaint_type": "<bank|telco|utility|landlord|government|other>", "country": "<country name>", "sender_address": "<the user's mailing address if mentioned in the conversation, otherwise null>"}
+4. If the user says their complaint was ignored or rejected, respond with EXACTLY this JSON object and nothing else:
 {"action": "escalate"}
-4. For all other turns, reply in plain conversational English. Be empathetic, clear, professional. No markdown, no bullet points.`;
+5. For all other turns, reply in plain conversational English. Be empathetic, clear, professional. No markdown, no bullet points.`;
     } else if (complaint.stage === 'draft') {
       const letterText = existingLetter?.letter || '(letter not yet generated)';
       systemPrompt = `You are Redress, the complaint resolution agent. The user's formal complaint letter has already been generated. Here it is:
@@ -200,6 +227,30 @@ Answer the user's questions helpfully and conversationally. No JSON signals are 
       complaint.complaintType = parsed.complaint_type || complaint.complaintType;
       complaint.country = parsed.country || complaint.country;
       await complaint.save();
+
+      // If the agent collected info that's missing from the user's profile, persist it
+      // so future letters automatically include a proper sender block.
+      if (userRecord) {
+        let userDirty = false;
+        const collectedAddress = (parsed.sender_address || '').toString().trim();
+        if (collectedAddress && !userRecord.address && !/^null$/i.test(collectedAddress)) {
+          userRecord.address = collectedAddress;
+          userDirty = true;
+        }
+        const collectedCountry = (parsed.country || '').toString().trim();
+        if (collectedCountry && !userRecord.country) {
+          userRecord.country = collectedCountry;
+          userDirty = true;
+        }
+        if (userDirty) {
+          try {
+            await userRecord.save();
+          } catch (e) {
+            console.error('Failed to persist sender info to user profile:', e);
+          }
+        }
+      }
+
       ready_for_letter = true;
       action = 'ready_for_letter';
       displayReply = `${namePrefix}I have everything I need. Click Generate Letter to get your formal complaint letter.`;

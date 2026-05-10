@@ -41,13 +41,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const senderCountry = (senderUser?.country || '').trim();
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const senderLines: string[] = [];
-    if (senderName) senderLines.push(`- Sender's name: ${senderName}`);
-    if (senderAddress) senderLines.push(`- Sender's address: ${senderAddress}`);
-    if (senderCountry) senderLines.push(`- Sender's country: ${senderCountry}`);
-    const senderBlockHints = senderLines.length
-      ? senderLines.join('\n')
-      : '- (No sender info provided — skip the sender address block)';
+    const senderInfoLines: string[] = [];
+    if (senderName) senderInfoLines.push(`- name = ${senderName}`);
+    if (senderAddress) senderInfoLines.push(`- address = ${senderAddress}`);
+    if (senderCountry) senderInfoLines.push(`- country = ${senderCountry}`);
+    const senderInfoBlock = senderInfoLines.length
+      ? senderInfoLines.join('\n')
+      : '- (no sender info on file — extract any address mentioned in the conversation; otherwise use only the name)';
 
     const prompt = `Generate a formal complaint letter based on the conversation history below.
 Return ONLY a JSON object with no other text.
@@ -55,10 +55,16 @@ Return ONLY a JSON object with no other text.
 Conversation History:
 ${historyText}
 
-The "letter" field must follow this structure exactly, with a blank line between each section:
+SENDER INFO (use these exact values verbatim, do not paraphrase):
+${senderInfoBlock}
 
-1. SENDER ADDRESS BLOCK at the top-left:
-${senderBlockHints}
+The "letter" field must follow this EXACT structure, with one blank line between each section:
+
+1. SENDER ADDRESS BLOCK at the top-left. REQUIRED. Render the sender info above as separate lines in this order:
+   <sender name>
+   <sender address>   (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
+   <sender country>   (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
+   Never write "[Your Address]" or any other bracketed placeholder.
 
 2. DATE: ${today}
 
@@ -68,9 +74,10 @@ ${senderBlockHints}
 
 5. BODY: clear description of the issue, resolution requested, 14-day response deadline.
 
-6. CLOSING ("Sincerely,") then signature line${senderName ? `: ${senderName}` : ''}.
+6. CLOSING ("Sincerely,") then on a new line the actual sender name${senderName ? `: ${senderName}` : ''}.
 
-Use \\n for line breaks within a block, and \\n\\n for blank lines between sections. Do NOT use placeholders like [Your Name], [Your Address], [Your Email] — omit any line whose value is missing.
+Use \\n for line breaks within a block, and \\n\\n for blank lines between sections.
+ABSOLUTELY NO placeholders such as [Your Name], [Your Address], [Your Email], [Your Phone], [Your City], [Your State]. Omit any line whose value is missing.
 
 Return ONLY a JSON object in this format:
 {
