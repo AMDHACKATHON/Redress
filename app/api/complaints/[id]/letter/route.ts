@@ -5,7 +5,7 @@ import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
 import User from '@/lib/models/User';
-import { searchRegulator } from '@/lib/search';
+import { searchRegulator, searchCompanyContact } from '@/lib/search';
 import { applySenderName } from '@/lib/letter-utils';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -74,15 +74,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
     const messageContext = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
 
-    // Extract country and sector for search
+    // Extract country, sector, and company; then search the web in parallel for
+    // (a) the relevant regulatory body and (b) the company's public complaint email.
     let searchResults = '';
+    let companyContactResults = '';
     try {
-      const extractionPrompt = `Based on this complaint conversation, extract two things and respond ONLY with valid JSON, nothing else:
+      const extractionPrompt = `Based on this complaint conversation, extract three fields and respond ONLY with valid JSON, nothing else:
 {
   "country": "the country this complaint is about",
-  "sector": "one of: banking, telecom, utility, housing, government, ecommerce, other"
+  "sector": "one of: banking, telecom, utility, housing, government, ecommerce, other",
+  "company": "the exact name of the organization being complained about"
 }`;
-      
+
       const extractionResponse = await fetch(process.env.AMD_API_URL!, {
         method: 'POST',
         headers: {
@@ -102,10 +105,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       if (extractionResponse.ok) {
         const extractionData = await extractionResponse.json();
-        const extracted = JSON.parse(extractionData.choices[0].message.content.trim().replace(/^```json/, '').replace(/```$/, ''));
-        if (extracted.country && extracted.sector) {
-          searchResults = await searchRegulator(extracted.country, extracted.sector);
-        }
+        const extracted = JSON.parse(
+          extractionData.choices[0].message.content.trim().replace(/^```json/, '').replace(/```$/, '')
+        );
+        const [regulator, companyContact] = await Promise.all([
+          extracted.country && extracted.sector
+            ? searchRegulator(extracted.country, extracted.sector)
+            : Promise.resolve(''),
+          extracted.company
+            ? searchCompanyContact(extracted.company, extracted.country)
+            : Promise.resolve(''),
+        ]);
+        searchResults = regulator;
+        companyContactResults = companyContact;
       }
     } catch (e) {
       console.error('Extraction/Search failed, proceeding without it:', e);
@@ -169,11 +181,16 @@ ${searchResults}
 
 Use this information to ensure the regulator name, contact details, and filing channel are accurate.` : ''}
 
+${companyContactResults ? `Company contact information from web search (use this to populate "recipient_contact"):
+${companyContactResults}
+
+Extract the most reliable customer service / complaints email address from these snippets. Look for an actual email pattern (something@company.tld). If multiple appear, prefer the one most clearly labeled as customer service, support, complaints, or contact. If none of the snippets contain a clear email, return null.` : ''}
+
 Respond ONLY with a valid JSON object in this exact format and nothing else:
 {
   "letter": "full letter text here",
   "recipient": "Customer Service Manager, [Organization]",
-  "recipient_contact": "<the company's customer service email if commonly known (e.g. support@digitalocean.com), otherwise null>",
+  "recipient_contact": "<a real customer-service email extracted from the company contact snippets above, or one you are highly confident about; otherwise null>",
   "channel": "email",
   "regulator": {
     "name": "regulator name",
@@ -182,7 +199,10 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
   }
 }
 
-For "recipient_contact": only include a real email address you are confident about (e.g. well-known company support inbox). If you are not sure, return null — do not invent or guess email addresses.`;
+For "recipient_contact":
+- Strongly prefer an email taken directly from the company contact snippets above.
+- If no email appears in the snippets and you are not highly confident, return null.
+- NEVER invent, guess, or fabricate an email address. Returning null is better than guessing.`;
 
     let aiResponseContent = '';
     try {
