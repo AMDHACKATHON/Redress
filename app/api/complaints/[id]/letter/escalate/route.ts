@@ -129,7 +129,8 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
             { role: 'user', content: userContent }
           ],
           max_tokens: 2048,
-          temperature: 0.7
+          temperature: 0.7,
+          response_format: { type: 'json_object' }
         })
       });
 

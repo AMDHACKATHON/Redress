@@ -61,6 +61,7 @@ No markdown, no explanation. Pure JSON only.`;
         model: MODEL,
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
+        response_format: { type: 'json_object' },
       }),
     });
 

@@ -93,7 +93,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             { role: 'system', content: extractionPrompt },
             { role: 'user', content: messageContext }
           ],
-          temperature: 0
+          temperature: 0,
+          response_format: { type: 'json_object' }
         })
       });
 
@@ -155,7 +156,8 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
             { role: 'user', content: `Conversation history:\n${messageContext}` }
           ],
           max_tokens: 2048,
-          temperature: 0.7
+          temperature: 0.7,
+          response_format: { type: 'json_object' }
         })
       });
 

@@ -98,7 +98,8 @@ export async function getSessionUser(_req?: Request) {
   if (session?.user) {
     return {
       id: (session.user as any).id as string,
-      email: session.user.email as string
+      email: session.user.email as string,
+      name: (session.user.name as string) || ''
     };
   }
 
