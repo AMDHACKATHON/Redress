@@ -4,6 +4,7 @@ import { connectDB } from '@/lib/mongodb';
 import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
+import { applySenderName } from '@/lib/letter-utils';
 
 const AMD_API_URL = process.env.AMD_API_URL;
 const AMD_API_KEY = process.env.AMD_API_KEY;
@@ -33,7 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const messages = await Message.find({ complaintId: id }).sort({ createdAt: 1 });
     const historyText = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
 
-    const prompt = `Generate a formal complaint letter based on the conversation history below. 
+    const senderName = userSession.name || '';
+    const prompt = `Generate a formal complaint letter based on the conversation history below.
 Return ONLY a JSON object with no other text.
 
 Conversation History:
@@ -48,7 +50,8 @@ Return ONLY a JSON object in this format:
   "regulatorContact": "<regulator email or website>",
   "regulatorCountry": "<country>"
 }
-Today's date: ${new Date().toLocaleDateString()}. Formal tone. Include response deadline of 14 days. Sign off as [Your Name].
+Today's date: ${new Date().toLocaleDateString()}. Formal tone. Include response deadline of 14 days.
+Sign off with the sender's name: ${senderName || '[no name available]'}. Do NOT use placeholders like [Your Name] in the signature — use the actual name above.
 No markdown, no explanation. Pure JSON only.`;
 
     const response = await fetch(AMD_API_URL!, {
@@ -76,6 +79,7 @@ No markdown, no explanation. Pure JSON only.`;
     content = content.replace(/^```json/, '').replace(/```$/, '').trim();
 
     const parsedLetter = JSON.parse(content);
+    parsedLetter.letter = applySenderName(parsedLetter.letter, senderName);
 
     // Save to Letter collection
     const letter = await Letter.create({

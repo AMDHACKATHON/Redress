@@ -6,6 +6,7 @@ import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
 import EscalationLetter from '@/lib/models/EscalationLetter';
 import { searchRegulator } from '@/lib/search';
+import { applySenderName } from '@/lib/letter-utils';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -86,6 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('Search failed, proceeding without it:', e);
     }
 
+    const senderName = userSession.name || '';
     const systemPrompt = `You are a professional legal letter writer specializing in regulatory complaints. Based on the original complaint letter and conversation provided, write a formal escalation letter addressed to the relevant regulatory body.
 
 The escalation letter must include:
@@ -93,7 +95,9 @@ The escalation letter must include:
 - Reference to the original complaint and date it was sent
 - The fact that no satisfactory response was received
 - A clear request for regulatory intervention
-- A professional closing
+- A professional closing signed off with the sender's name${senderName ? `: "${senderName}"` : ''}
+
+Do NOT use placeholders like [Your Name] in the signature — write the actual name above.
 
 Also provide step-by-step filing instructions for submitting to this regulator.
 
@@ -157,7 +161,7 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
     // Save to MongoDB
     const escalation = await EscalationLetter.create({
       complaintId: id,
-      escalationLetter: parsedEscalation.escalation_letter,
+      escalationLetter: applySenderName(parsedEscalation.escalation_letter, senderName),
       regulatorName: parsedEscalation.regulator.name,
       regulatorContact: parsedEscalation.regulator.contact,
       filingInstructions: parsedEscalation.regulator.filing_instructions

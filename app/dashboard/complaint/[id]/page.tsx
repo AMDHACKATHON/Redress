@@ -105,7 +105,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
         content: userMessageContent
       });
 
-      const { reply, stage, ready_for_letter, messageId } = response.data;
+      const { reply, stage, ready_for_letter, messageId, action, letter: revisedLetter } = response.data;
 
       // Add agent message
       const agentMsg: Message = {
@@ -129,6 +129,11 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
 
       if (stage === 'escalate') {
         setShowEscalateButton(true);
+      }
+
+      if (action === 'edit_letter' && revisedLetter) {
+        setLetter(revisedLetter);
+        toast.success('Letter updated');
       }
 
     } catch (error) {

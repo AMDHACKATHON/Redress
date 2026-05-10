@@ -5,6 +5,7 @@ import Complaint from '@/lib/models/Complaint';
 import Message from '@/lib/models/Message';
 import Letter from '@/lib/models/Letter';
 import { searchRegulator } from '@/lib/search';
+import { applySenderName } from '@/lib/letter-utils';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -109,7 +110,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('Extraction/Search failed, proceeding without it:', e);
     }
 
-    let systemPrompt = `You are a professional legal letter writer. Based on the complaint conversation provided, write a formal complaint letter. 
+    const senderName = userSession.name || '';
+    let systemPrompt = `You are a professional legal letter writer. Based on the complaint conversation provided, write a formal complaint letter.
 
 The letter must include:
 - Today's date
@@ -117,7 +119,9 @@ The letter must include:
 - A clear description of the issue
 - What resolution the complainant is requesting
 - A deadline of 14 days for response
-- A professional closing
+- A professional closing signed off with the sender's name${senderName ? `: "${senderName}"` : ''}
+
+Do NOT use placeholders like [Your Name] in the signature — write the actual name above.
 
 Also identify:
 - The recipient title and organization
@@ -182,10 +186,12 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
       return NextResponse.json({ error: 'Failed to generate a valid letter structure. Please try again.', code: 500 }, { status: 500 });
     }
 
+    const finalLetterText = applySenderName(parsedLetter.letter, senderName);
+
     // Save to MongoDB
     const letter = await Letter.create({
       complaintId: id,
-      letter: parsedLetter.letter,
+      letter: finalLetterText,
       recipient: parsedLetter.recipient,
       channel: parsedLetter.channel,
       regulatorName: parsedLetter.regulator.name,
