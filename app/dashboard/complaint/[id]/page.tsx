@@ -22,12 +22,13 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   
-  const { 
+  const {
+    user,
     activeComplaint, setActiveComplaint,
     messages, setMessages, addMessage,
     letter, setLetter,
     escalationLetter, setEscalationLetter,
-    isLoading, setLoading 
+    isLoading, setLoading
   } = useStore();
 
   const [input, setInput] = useState('');
@@ -350,7 +351,12 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
                   country: letter.regulatorCountry
                 }}
               />
-              <PDFDownloadButton letter={letter.letter} filename="redress-complaint.pdf" />
+              <PDFDownloadButton
+                letter={letter.letter}
+                userName={user?.name}
+                orgName={letter.recipient}
+                variant="complaint"
+              />
             </div>
           )}
 
@@ -367,7 +373,12 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
                   filing_instructions: escalationLetter.filingInstructions
                 }}
               />
-              <PDFDownloadButton letter={escalationLetter.escalationLetter} filename="redress-escalation.pdf" />
+              <PDFDownloadButton
+                letter={escalationLetter.escalationLetter}
+                userName={user?.name}
+                orgName={letter?.recipient || escalationLetter.regulatorName}
+                variant="escalation"
+              />
             </div>
           )}
         </div>

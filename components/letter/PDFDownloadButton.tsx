@@ -6,49 +6,108 @@ import { jsPDF } from 'jspdf';
 
 interface PDFDownloadButtonProps {
   letter: string;
-  filename: string;
+  userName?: string | null;
+  orgName?: string | null;
+  variant?: 'complaint' | 'escalation';
 }
 
-export default function PDFDownloadButton({ letter, filename }: PDFDownloadButtonProps) {
+function slugify(s: string): string {
+  return s
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function extractOrg(recipient: string): string {
+  const parts = recipient.split(',').map((p) => p.trim()).filter(Boolean);
+  return parts[parts.length - 1] || recipient;
+}
+
+export default function PDFDownloadButton({
+  letter,
+  userName,
+  orgName,
+  variant = 'complaint',
+}: PDFDownloadButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generatePDF = async () => {
     setIsGenerating(true);
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
       const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 20;
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 22;
       const contentWidth = pageWidth - margin * 2;
+      const lineHeight = 6.2;
+      const paragraphGap = 4;
+      const topY = 30;
+      const bottomLimit = pageHeight - 22;
 
-      // Add Redress Header
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.text('Redress', margin, 25);
+      const drawWatermark = () => {
+        doc.saveGraphicsState();
+        // very faint grey, large, rotated 45° across the page center
+        doc.setTextColor(225, 225, 225);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(120);
+        doc.text('Redress', pageWidth / 2, pageHeight / 2, {
+          align: 'center',
+          baseline: 'middle',
+          angle: 35,
+        });
+        doc.restoreGraphicsState();
+      };
 
-      // Add a horizontal line
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, 30, pageWidth - margin, 30);
+      const drawFooter = () => {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(160, 160, 160);
+        doc.text(
+          'Generated with Redress',
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      };
 
-      // Add Letter Text
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      
-      const splitText = doc.splitTextToSize(letter, contentWidth);
-      
-      // Starting Y position for the letter text
-      let y = 45;
-      
-      // Handle multi-page if necessary
-      for (let i = 0; i < splitText.length; i++) {
-        if (y > 280) {
-          doc.addPage();
-          y = 20;
+      const startPage = () => {
+        drawWatermark();
+        drawFooter();
+        // Reset to body text style
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11.5);
+        doc.setTextColor(30, 30, 30);
+      };
+
+      startPage();
+
+      let y = topY;
+
+      const paragraphs = letter
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean);
+
+      for (const paragraph of paragraphs) {
+        const lines: string[] = doc.splitTextToSize(paragraph, contentWidth);
+        for (const line of lines) {
+          if (y > bottomLimit) {
+            doc.addPage();
+            startPage();
+            y = topY;
+          }
+          doc.text(line, margin, y);
+          y += lineHeight;
         }
-        doc.text(splitText[i], margin, y);
-        y += 6; // Line height
+        y += paragraphGap;
       }
 
-      doc.save(filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      const safeUser = userName ? slugify(userName) : 'user';
+      const safeOrg = orgName ? slugify(extractOrg(orgName)) : 'recipient';
+      const docKind = variant === 'escalation' ? 'escalation' : 'complaint';
+      const filename = `${safeOrg}_${docKind}_${safeUser}_Redress.pdf`;
+
+      doc.save(filename);
     } catch (error) {
       console.error('PDF generation failed:', error);
     } finally {
@@ -58,6 +117,7 @@ export default function PDFDownloadButton({ letter, filename }: PDFDownloadButto
 
   return (
     <button
+      type="button"
       onClick={generatePDF}
       disabled={isGenerating}
       className="flex items-center justify-center space-x-2 bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"

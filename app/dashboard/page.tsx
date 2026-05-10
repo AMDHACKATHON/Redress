@@ -7,12 +7,14 @@ import api from '@/lib/api';
 import { Complaint, Stage } from '@/types';
 import { toast } from 'react-hot-toast';
 import { useStore } from '@/lib/store';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 export default function ComplaintsPage() {
   const router = useRouter();
   const { complaints, setComplaints, isLoading, setLoading } = useStore();
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     fetchComplaints();
@@ -49,7 +51,13 @@ export default function ComplaintsPage() {
 
   const deleteComplaint = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this complaint?')) return;
+    const ok = await confirm({
+      title: 'Delete this complaint?',
+      description: 'This will permanently remove the complaint and all its messages and letters. This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+    if (!ok) return;
 
     setDeletingId(id);
     try {

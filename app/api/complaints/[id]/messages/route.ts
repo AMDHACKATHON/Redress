@@ -109,10 +109,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ? null
         : await Letter.findOne({ complaintId: id });
 
+    // Build user context for the agent
+    const fullName = (userSession.name || '').trim();
+    const firstName = fullName.split(/\s+/)[0] || '';
+    const userContextLine = fullName
+      ? `You are speaking with ${fullName}${firstName && firstName !== fullName ? ` (first name: ${firstName})` : ''}. Address them by their first name when it feels natural — but don't force it into every reply.`
+      : `You don't yet know the user's name. If it comes up naturally, you can ask, otherwise don't.`;
+
     // Stage-specific system prompt
     let systemPrompt = '';
     if (complaint.stage === 'understand') {
       systemPrompt = `You are Redress, an AI complaint resolution agent. Your job is to help users draft formal complaint letters and escalate to regulators if needed.
+
+${userContextLine}
 
 Rules:
 1. Ask at most 3 short clarifying questions to gather: the organization name, what happened, the country, the date, and what outcome the user wants.
@@ -132,7 +141,9 @@ ${letterText}
 Recipient: ${existingLetter?.recipient || 'unknown'}
 Channel: ${existingLetter?.channel || 'unknown'}
 Regulator: ${existingLetter?.regulatorName || 'unknown'} (${existingLetter?.regulatorCountry || 'unknown'})
-Sender's name (for any signature): ${userSession.name || 'unknown'}
+Sender's name (for any signature): ${fullName || 'unknown'}
+
+${userContextLine}
 
 The user can do three things in this stage:
 
@@ -146,7 +157,11 @@ C. Say their complaint was ignored / they want to escalate to a regulator. When 
 
 Only emit a JSON action when one of B or C clearly applies. Otherwise reply conversationally. Never wrap JSON in markdown — emit it as raw JSON, alone, when used.`;
     } else {
-      systemPrompt = `You are Redress, the complaint resolution agent. An escalation letter has been sent to the regulator. Answer the user's questions helpfully and conversationally. No JSON signals are needed in this stage. No markdown bullets.`;
+      systemPrompt = `You are Redress, the complaint resolution agent. An escalation letter has been sent to the regulator.
+
+${userContextLine}
+
+Answer the user's questions helpfully and conversationally. No JSON signals are needed in this stage. No markdown bullets.`;
     }
 
     const conversation = [
@@ -177,6 +192,7 @@ Only emit a JSON action when one of B or C clearly applies. Otherwise reply conv
     let action: string | null = null;
     let updatedLetter: any = null;
 
+    const namePrefix = firstName ? `${firstName}, ` : '';
     if (parsed?.action === 'ready_for_letter' && complaint.stage === 'understand') {
       stage = 'draft';
       complaint.stage = 'draft';
@@ -186,13 +202,13 @@ Only emit a JSON action when one of B or C clearly applies. Otherwise reply conv
       await complaint.save();
       ready_for_letter = true;
       action = 'ready_for_letter';
-      displayReply = 'I have everything I need. Click Generate Letter to get your formal complaint letter.';
+      displayReply = `${namePrefix}I have everything I need. Click Generate Letter to get your formal complaint letter.`;
     } else if (parsed?.action === 'escalate') {
       stage = 'escalate';
       complaint.stage = 'escalate';
       await complaint.save();
       action = 'escalate';
-      displayReply = 'Understood. Click Escalate to Regulator to generate your escalation letter.';
+      displayReply = `Understood${firstName ? `, ${firstName}` : ''}. Click Escalate to Regulator to generate your escalation letter.`;
     } else if (parsed?.action === 'edit_letter' && existingLetter) {
       const instructions = (parsed.instructions || '').toString().trim() || 'improve the letter';
       const senderName = userSession.name || '';

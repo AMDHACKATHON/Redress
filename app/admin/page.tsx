@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'react-hot-toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 
 const ADMIN_EMAIL = 'hello@samkiel.dev';
 
@@ -64,6 +65,7 @@ export default function AdminDashboard() {
   const [userDetails, setUserDetails] = useState<{[key: string]: {user: UserDetail, complaints: ComplaintDetail[]}}>({});
   const [fetchingDetails, setFetchingDetails] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (status === 'unauthenticated' || (status === 'authenticated' && session?.user?.email !== ADMIN_EMAIL)) {
@@ -105,9 +107,13 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure? This will delete the user and ALL their data (complaints, letters, messages). This cannot be undone.')) {
-      return;
-    }
+    const ok = await confirm({
+      title: 'Delete this user?',
+      description: 'This will delete the user and ALL their data (complaints, letters, messages). This cannot be undone.',
+      confirmLabel: 'Delete user',
+      variant: 'danger',
+    });
+    if (!ok) return;
 
     setDeletingId(userId);
     try {
