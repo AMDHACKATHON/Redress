@@ -3,7 +3,7 @@
 > Turn your complaint into a formal letter and escalate to regulators if ignored. Any country. Any sector.
 
 🔗 **Live App:** https://redressamd.vercel.app
-🤗 **HuggingFace Space:** https://huggingface.co/spaces/samkiel/redress
+🤗 **HuggingFace Space:** https://huggingface.co/spaces/lablab-ai-amd-developer-hackathon/redress
 
 ---
 
@@ -21,6 +21,8 @@ Redress solves that. It's an AI agent that:
 ---
 
 ## Demo
+
+📺 **Demo Video:** [Watch here](https://storage.googleapis.com/lablab-video-submissions/n3v922wai9khqi5gs2jctlap/raw/submission-video-x-n3v922wai9khqi5gs2jctlap-i8whdej1c960du34gqjwmb3q_hg0b45gy6y54wfgzcdodt4g1.mp4)
 
 ![Redress Demo](./demo.gif)
 
