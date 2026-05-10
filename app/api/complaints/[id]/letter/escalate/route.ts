@@ -88,15 +88,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('Search failed, proceeding without it:', e);
     }
 
-    const senderUser = await User.findById(userSession.id).select('name address country');
+    const senderUser = await User.findById(userSession.id).select('name address state country');
     const senderName = (senderUser?.name || userSession.name || '').trim();
     const senderAddress = (senderUser?.address || '').trim();
+    const senderState = (senderUser?.state || '').trim();
     const senderCountry = (senderUser?.country || '').trim();
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const senderLines: string[] = [];
     if (senderName) senderLines.push(`- Sender's name: ${senderName}`);
     if (senderAddress) senderLines.push(`- Sender's address: ${senderAddress}`);
+    if (senderState) senderLines.push(`- Sender's state/region: ${senderState}`);
     if (senderCountry) senderLines.push(`- Sender's country: ${senderCountry}`);
     const senderBlockHints = senderLines.length
       ? senderLines.join('\n')

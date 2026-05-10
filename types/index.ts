@@ -6,6 +6,7 @@ export interface User {
   name: string;
   avatar: string | null;
   country: string | null;
+  state: string | null;
   address: string | null;
   complaint_count: number;
   created_at: string;

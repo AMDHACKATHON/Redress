@@ -10,6 +10,7 @@ import {
   Trash2,
   Mail,
   Globe,
+  MapPin,
   User as UserIcon,
   Upload,
   X,
@@ -28,6 +29,7 @@ interface ProfileResponse {
   email: string;
   avatar: string | null;
   country: string | null;
+  state: string | null;
   address: string | null;
 }
 
@@ -80,12 +82,13 @@ export default function SettingsPage() {
 
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
+  const [stateRegion, setStateRegion] = useState('');
   const [address, setAddress] = useState('');
   const [avatar, setAvatar] = useState('');
   const [email, setEmail] = useState('');
 
   // Snapshot of saved values, used to compute the dirty flag.
-  const [saved, setSaved] = useState({ name: '', country: '', address: '', avatar: '' });
+  const [saved, setSaved] = useState({ name: '', country: '', state: '', address: '', avatar: '' });
 
   useEffect(() => {
     let active = true;
@@ -96,14 +99,22 @@ export default function SettingsPage() {
         const p = res.data;
         const nextName = p.name || '';
         const nextCountry = p.country || '';
+        const nextState = p.state || '';
         const nextAddress = p.address || '';
         const nextAvatar = p.avatar || '';
         setName(nextName);
         setEmail(p.email || '');
         setCountry(nextCountry);
+        setStateRegion(nextState);
         setAddress(nextAddress);
         setAvatar(nextAvatar);
-        setSaved({ name: nextName, country: nextCountry, address: nextAddress, avatar: nextAvatar });
+        setSaved({
+          name: nextName,
+          country: nextCountry,
+          state: nextState,
+          address: nextAddress,
+          avatar: nextAvatar,
+        });
       } catch (err) {
         toast.error('Failed to load profile');
       } finally {
@@ -118,6 +129,7 @@ export default function SettingsPage() {
   const dirty =
     name !== saved.name ||
     country !== saved.country ||
+    stateRegion !== saved.state ||
     address !== saved.address ||
     avatar !== saved.avatar;
 
@@ -130,24 +142,31 @@ export default function SettingsPage() {
     }
     setSaving(true);
     try {
+      const trimmedCountry = country.trim();
+      // If they cleared the country, drop the state too — orphaned state makes no sense
+      const effectiveState = trimmedCountry ? stateRegion.trim() : '';
       await api.patch('profile/update', {
         name: name.trim(),
-        country: country.trim() || null,
+        country: trimmedCountry || null,
+        state: effectiveState || null,
         address: address.trim() || null,
         avatar: avatar.trim() || null,
       });
       const next = {
         name: name.trim(),
-        country: country.trim(),
+        country: trimmedCountry,
+        state: effectiveState,
         address: address.trim(),
         avatar: avatar.trim(),
       };
       setSaved(next);
+      setStateRegion(effectiveState);
       if (user) {
         setUser({
           ...user,
           name: next.name,
           country: next.country || null,
+          state: next.state || null,
           address: next.address || null,
           avatar: next.avatar || null,
         });
@@ -288,7 +307,11 @@ export default function SettingsPage() {
             <select
               id="settings-country"
               value={country}
-              onChange={(e) => setCountry(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setCountry(next);
+                if (!next) setStateRegion('');
+              }}
               className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 transition [color-scheme:dark]"
             >
               <option value="" className="bg-slate-900 text-white">Select a country</option>
@@ -297,6 +320,28 @@ export default function SettingsPage() {
               ))}
             </select>
           </div>
+
+          {country && (
+            <div className="space-y-2">
+              <label
+                htmlFor="settings-state"
+                className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"
+              >
+                <MapPin size={12} /> State / Province / Region
+              </label>
+              <input
+                id="settings-state"
+                type="text"
+                value={stateRegion}
+                onChange={(e) => setStateRegion(e.target.value)}
+                placeholder="e.g. Lagos, California, Ontario"
+                className="w-full px-4 py-2.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/50 transition"
+              />
+              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                Helps the agent find the right state-level regulator and produce a complete sender block.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label

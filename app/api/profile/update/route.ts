@@ -25,7 +25,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, avatar, country, address } = body;
+    const { name, avatar, country, state, address } = body;
 
     // Update fields if provided
     if (name !== undefined) {
@@ -36,6 +36,9 @@ export async function PATCH(req: NextRequest) {
     }
     if (country !== undefined) {
       user.country = country;
+    }
+    if (state !== undefined) {
+      user.state = state;
     }
     if (address !== undefined) {
       user.address = address;
@@ -49,6 +52,7 @@ export async function PATCH(req: NextRequest) {
       email: user.email,
       avatar: user.avatar,
       country: user.country,
+      state: user.state,
       address: user.address,
       complaint_count: user.complaintCount,
       created_at: user.createdAt,

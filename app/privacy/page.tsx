@@ -133,10 +133,10 @@ export default function PrivacyPage() {
           <p>
             Questions, requests, or concerns about your data: email{' '}
             <a
-              href="mailto:hello@samkiel.dev"
+              href="mailto:redress@samkiel.dev"
               className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
             >
-              hello@samkiel.dev
+              redress@samkiel.dev
             </a>
             .
           </p>

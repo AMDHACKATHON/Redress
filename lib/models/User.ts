@@ -6,6 +6,7 @@ export interface IUser extends Document {
   password: string;
   avatar: string | null;
   country: string | null;
+  state: string | null;
   address: string | null;
   complaintCount: number;
   createdAt: Date;
@@ -33,6 +34,10 @@ const UserSchema = new Schema<IUser>({
     default: null,
   },
   country: {
+    type: String,
+    default: null,
+  },
+  state: {
     type: String,
     default: null,
   },

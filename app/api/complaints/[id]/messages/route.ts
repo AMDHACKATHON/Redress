@@ -166,15 +166,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         : await Letter.findOne({ complaintId: id });
 
     // Look up the user record so the agent knows what's already on file
-    const userRecord = await User.findById(userSession.id).select('name address country');
+    const userRecord = await User.findById(userSession.id).select('name address state country');
     const fullName = ((userRecord?.name || userSession.name || '') as string).trim();
     const firstName = fullName.split(/\s+/)[0] || '';
     const senderAddress = (userRecord?.address || '').trim();
+    const senderState = (userRecord?.state || '').trim();
     const senderCountry = (userRecord?.country || '').trim();
 
     const knownProfile: string[] = [];
     if (fullName) knownProfile.push(`Name: ${fullName}`);
     if (senderAddress) knownProfile.push(`Address: ${senderAddress}`);
+    if (senderState) knownProfile.push(`State/region: ${senderState}`);
     if (senderCountry) knownProfile.push(`Country: ${senderCountry}`);
     const profileBlock = knownProfile.length
       ? knownProfile.join('\n')
@@ -182,6 +184,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const missingFields: string[] = [];
     if (!senderAddress) missingFields.push('mailing address');
+    if (!senderState) missingFields.push('state/region');
     if (!senderCountry) missingFields.push('country');
 
     const userContextLine = fullName
@@ -208,7 +211,7 @@ Rules:
 1. Gather: the organization name, what happened, the country, the date, what outcome the user wants — plus the sender's mailing address if not already on file.
 2. Keep it tight: at most 3 short clarifying questions total. Combine related questions when possible.
 3. Once you have enough information AND no clarifying questions remain, respond with EXACTLY this JSON object and nothing else (no prose before or after):
-{"action": "ready_for_letter", "summary": "<one sentence summary of the complaint>", "complaint_type": "<bank|telco|utility|landlord|government|other>", "country": "<country name>", "sender_address": "<the user's mailing address if mentioned in the conversation, otherwise null>"}
+{"action": "ready_for_letter", "summary": "<one sentence summary of the complaint>", "complaint_type": "<bank|telco|utility|landlord|government|other>", "country": "<country name>", "sender_state": "<the user's state/province/region if mentioned in the conversation, otherwise null>", "sender_address": "<the user's mailing address if mentioned in the conversation, otherwise null>"}
 4. If the user says their complaint was ignored or rejected, respond with EXACTLY this JSON object and nothing else:
 {"action": "escalate"}
 5. For all other turns, reply in plain conversational English. Be empathetic, clear, professional. No markdown, no bullet points.
@@ -319,6 +322,11 @@ Answer the user's questions warmly and briefly. Don't suggest new escalations or
         const collectedAddress = (parsed.sender_address || '').toString().trim();
         if (collectedAddress && !userRecord.address && !/^null$/i.test(collectedAddress)) {
           userRecord.address = collectedAddress;
+          userDirty = true;
+        }
+        const collectedState = (parsed.sender_state || '').toString().trim();
+        if (collectedState && !userRecord.state && !/^null$/i.test(collectedState)) {
+          userRecord.state = collectedState;
           userDirty = true;
         }
         const collectedCountry = (parsed.country || '').toString().trim();

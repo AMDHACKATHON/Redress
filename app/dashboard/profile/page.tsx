@@ -22,6 +22,7 @@ interface ProfileResponse {
   email: string;
   avatar: string | null;
   country: string | null;
+  state: string | null;
   address: string | null;
   complaintCount?: number;
   complaint_count?: number;
@@ -34,6 +35,7 @@ interface NormalizedProfile {
   email: string;
   avatar: string | null;
   country: string;
+  state: string;
   address: string;
   complaintCount: number;
   createdAt: string;
@@ -45,6 +47,7 @@ function normalize(p: ProfileResponse): NormalizedProfile {
     email: p.email || '',
     avatar: p.avatar || null,
     country: p.country || '',
+    state: p.state || '',
     address: p.address || '',
     complaintCount: p.complaintCount ?? p.complaint_count ?? 0,
     createdAt: p.createdAt || p.created_at || '',
@@ -93,6 +96,7 @@ export default function ProfilePage() {
     : '—';
 
   const profileFieldsComplete = !!profile.country && !!profile.address;
+  const locationLabel = [profile.state, profile.country].filter(Boolean).join(', ');
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -174,8 +178,8 @@ export default function ProfilePage() {
         <div className="space-y-4">
           <ReadOnlyField
             icon={<Globe size={12} />}
-            label="Country"
-            value={profile.country}
+            label="Location"
+            value={locationLabel}
             empty="No country set"
           />
           <ReadOnlyField

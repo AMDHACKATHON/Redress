@@ -123,15 +123,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error('Extraction/Search failed, proceeding without it:', e);
     }
 
-    const senderUser = await User.findById(userSession.id).select('name address country');
+    const senderUser = await User.findById(userSession.id).select('name address state country');
     const senderName = (senderUser?.name || userSession.name || '').trim();
     const senderAddress = (senderUser?.address || '').trim();
+    const senderState = (senderUser?.state || '').trim();
     const senderCountry = (senderUser?.country || '').trim();
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const senderInfoLines: string[] = [];
     if (senderName) senderInfoLines.push(`- name = ${senderName}`);
     if (senderAddress) senderInfoLines.push(`- address = ${senderAddress}`);
+    if (senderState) senderInfoLines.push(`- state/region = ${senderState}`);
     if (senderCountry) senderInfoLines.push(`- country = ${senderCountry}`);
     const senderInfoBlock = senderInfoLines.length
       ? senderInfoLines.join('\n')
@@ -144,11 +146,12 @@ ${senderInfoBlock}
 
 Format the letter using this EXACT structure, with one blank line between each section:
 
-Section 1 — Sender address block at the top-left. REQUIRED. Render the sender info as separate lines:
+Section 1 — Sender address block at the top-left. REQUIRED. Render the sender info as separate lines, using ONLY the values that are provided:
    - Line 1: the sender's name
-   - Line 2 (only if provided): the sender's address
-   - Line 3 (ONLY if the country is provided AND the address line above does NOT already end with that country): the sender's country
-   If the address already contains the country (e.g. "12 Maple St, Toronto, Canada"), DO NOT add a separate country line — that would duplicate it.
+   - Line 2 (only if address provided): the sender's address
+   - Line 3 (only if state/region provided AND not already present in the address line): the sender's state/region
+   - Line 4 (only if country provided AND not already present in the address or state line): the sender's country
+   Skip any line whose value isn't provided. Never duplicate the same place name across two lines (e.g. if the address line ends with "Lagos, Nigeria", omit the standalone state and country lines).
 
 Section 2 — The current date on its own line: ${today}
    Render the date itself only. DO NOT prefix it with "DATE:", "Date:", or any other label.

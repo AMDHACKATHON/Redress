@@ -128,10 +128,10 @@ export default function TermsPage() {
           <p>
             Questions about these Terms: email{' '}
             <a
-              href="mailto:hello@samkiel.dev"
+              href="mailto:redress@samkiel.dev"
               className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2"
             >
-              hello@samkiel.dev
+              redress@samkiel.dev
             </a>
             .
           </p>
