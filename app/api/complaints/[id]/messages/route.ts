@@ -410,6 +410,7 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
       clarifying_questions_done: ready_for_letter,
       action,
       letter: updatedLetter,
+      summary: complaint.summary,
     });
   } catch (error: any) {
     console.error('Error in POST messages:', error);

@@ -30,11 +30,17 @@ export default function LetterDisplay({
 
   const cleanContact = (recipientContact || '').trim();
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanContact);
-  const gmailUrl = isEmail
-    ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cleanContact)}` +
-      `&su=${encodeURIComponent(emailSubject || title)}` +
-      `&body=${encodeURIComponent(letter)}`
-    : null;
+  // Always offer the Gmail compose link. If we have a verified email we pre-fill
+  // the recipient; otherwise Gmail opens with subject + body so the user can type
+  // the recipient address themselves.
+  const gmailParams = [
+    `view=cm`,
+    `fs=1`,
+    isEmail ? `to=${encodeURIComponent(cleanContact)}` : '',
+    `su=${encodeURIComponent(emailSubject || title)}`,
+    `body=${encodeURIComponent(letter)}`,
+  ].filter(Boolean).join('&');
+  const gmailUrl = `https://mail.google.com/mail/?${gmailParams}`;
 
   return (
     <div className="glass-card rounded-2xl overflow-hidden">
@@ -114,7 +120,7 @@ export default function LetterDisplay({
         </div>
 
         {/* Send via Gmail */}
-        {gmailUrl && (
+        <div className="space-y-1.5">
           <a
             href={gmailUrl}
             target="_blank"
@@ -124,7 +130,12 @@ export default function LetterDisplay({
             <Mail size={16} />
             Send via Gmail
           </a>
-        )}
+          {!isEmail && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center px-2">
+              We couldn't auto-fill the recipient — add their email in Gmail before sending.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

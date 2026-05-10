@@ -62,6 +62,8 @@ export interface AgentReply {
   clarifying_questions_done: boolean;
   action?: 'ready_for_letter' | 'edit_letter' | 'escalate' | null;
   letter?: Letter | null;
+  /** The complaint's updated summary — populated when the agent fires ready_for_letter. */
+  summary?: string | null;
 }
 
 export interface AuthTokens {

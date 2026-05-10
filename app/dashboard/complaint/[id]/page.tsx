@@ -106,7 +106,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
         content: userMessageContent
       });
 
-      const { reply, stage, ready_for_letter, messageId, action, letter: revisedLetter } = response.data;
+      const { reply, stage, ready_for_letter, messageId, action, letter: revisedLetter, summary } = response.data;
 
       // Add agent message
       const agentMsg: Message = {
@@ -118,9 +118,13 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
       };
       addMessage(agentMsg);
 
-      // Update complaint state
+      // Update complaint state — pick up the new summary too if the backend updated it
       if (activeComplaint) {
-        setActiveComplaint({ ...activeComplaint, stage });
+        setActiveComplaint({
+          ...activeComplaint,
+          stage,
+          summary: summary || activeComplaint.summary,
+        });
       }
 
       if (ready_for_letter) {

@@ -144,31 +144,33 @@ ${senderInfoBlock}
 
 Format the letter using this EXACT structure, with one blank line between each section:
 
-1. SENDER ADDRESS BLOCK at the top-left. This block is REQUIRED. Render the sender info above as separate lines in this order:
-   <sender name>
-   <sender address>     (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
-   <sender country>     (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
-   Never write "[Your Address]" or any other placeholder. If a value is missing, just leave that line out — never include a bracketed placeholder.
+Section 1 — Sender address block at the top-left. REQUIRED. Render the sender info as separate lines:
+   - Line 1: the sender's name
+   - Line 2 (only if provided): the sender's address
+   - Line 3 (ONLY if the country is provided AND the address line above does NOT already end with that country): the sender's country
+   If the address already contains the country (e.g. "12 Maple St, Toronto, Canada"), DO NOT add a separate country line — that would duplicate it.
 
-2. DATE: ${today}
+Section 2 — The current date on its own line: ${today}
+   Render the date itself only. DO NOT prefix it with "DATE:", "Date:", or any other label.
 
-3. RECIPIENT BLOCK:
-- Recipient title and organization (e.g. "Customer Service Manager, Acme Corp.")
-- If commonly known, include the organization's headquarters city/country on the next line
-- Do NOT invent a fake street address or postal code
+Section 3 — Recipient block:
+   - Line 1: title and organization (e.g. "Customer Service Manager, Acme Corp.")
+   - Line 2 (only if commonly known): organization HQ city, country
+   - Do NOT invent a fake street address or postal code.
 
-4. SALUTATION (e.g. "Dear Customer Service Manager,")
+Section 4 — Salutation (e.g. "Dear Customer Service Manager,")
 
-5. BODY:
-- A clear description of the issue
-- What resolution is requested
-- A 14-day response deadline
+Section 5 — Body paragraphs:
+   - Clear description of the issue
+   - Resolution requested
+   - 14-day response deadline
 
-6. CLOSING ("Sincerely," or "Yours faithfully,") followed on a new line by the actual sender name${senderName ? `: ${senderName}` : ''}.
+Section 6 — Closing ("Sincerely," or "Yours faithfully,") on its own line, followed on a new line by the actual sender name${senderName ? `: ${senderName}` : ''}.
 
 Critical rules:
 - Use \\n for line breaks within a block, and \\n\\n between sections.
 - ABSOLUTELY NO placeholders such as [Your Name], [Your Address], [Your Email], [Your Phone], [Your City], [Your State], [Your Zip Code]. If a value is unknown, omit the line.
+- Do NOT label sections in the output (no "DATE:", "RECIPIENT:", "BODY:", etc.). Render only the actual content for each section.
 - Use the literal name and address values shown above — copy them verbatim.
 
 Also identify:
@@ -251,6 +253,17 @@ For "recipient_contact":
       if (!v || typeof v !== 'string') return null;
       const trimmed = v.trim();
       if (!trimmed || /^null$/i.test(trimmed)) return null;
+      // Reject obviously invalid email shapes
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
+      // Anti-fabrication: if we have search snippets but the email isn't in them,
+      // null it out — the model likely guessed.
+      if (companyContactResults) {
+        const haystack = companyContactResults.toLowerCase();
+        if (!haystack.includes(trimmed.toLowerCase())) {
+          console.warn('recipient_contact not in search snippets, dropping:', trimmed);
+          return null;
+        }
+      }
       return trimmed;
     })();
 

@@ -60,24 +60,26 @@ ${senderInfoBlock}
 
 The "letter" field must follow this EXACT structure, with one blank line between each section:
 
-1. SENDER ADDRESS BLOCK at the top-left. REQUIRED. Render the sender info above as separate lines in this order:
-   <sender name>
-   <sender address>   (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
-   <sender country>   (only if provided above OR clearly mentioned in conversation; otherwise omit this line entirely)
-   Never write "[Your Address]" or any other bracketed placeholder.
+Section 1 — Sender address block at the top-left. REQUIRED. Render the sender info as separate lines:
+   - Line 1: the sender's name
+   - Line 2 (only if provided): the sender's address
+   - Line 3 (ONLY if the country is provided AND the address line does NOT already end with that country): the sender's country
+   If the address already contains the country, DO NOT add a separate country line.
 
-2. DATE: ${today}
+Section 2 — The current date on its own line: ${today}
+   Render the date itself only. DO NOT prefix with "DATE:", "Date:", or any label.
 
-3. RECIPIENT BLOCK: title and organization (and HQ location if commonly known). Do NOT invent a fake street address.
+Section 3 — Recipient block: title and organization (and HQ city, country if commonly known). Do NOT invent a fake street address.
 
-4. SALUTATION (e.g. "Dear Customer Service Manager,")
+Section 4 — Salutation (e.g. "Dear Customer Service Manager,")
 
-5. BODY: clear description of the issue, resolution requested, 14-day response deadline.
+Section 5 — Body: clear description of the issue, resolution requested, 14-day response deadline.
 
-6. CLOSING ("Sincerely,") then on a new line the actual sender name${senderName ? `: ${senderName}` : ''}.
+Section 6 — Closing ("Sincerely,") on its own line, then the actual sender name${senderName ? `: ${senderName}` : ''} on the next line.
 
 Use \\n for line breaks within a block, and \\n\\n for blank lines between sections.
-ABSOLUTELY NO placeholders such as [Your Name], [Your Address], [Your Email], [Your Phone], [Your City], [Your State]. Omit any line whose value is missing.
+ABSOLUTELY NO placeholders such as [Your Name], [Your Address], [Your Email]. Omit any line whose value is missing.
+Do NOT label sections in the output (no "DATE:", "RECIPIENT:", "BODY:", etc.).
 
 Return ONLY a JSON object in this format:
 {
