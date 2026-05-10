@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Home, User, LogOut, Shield, Menu, X, Loader2 } from 'lucide-react';
+import { Home, User, Settings, LogOut, Shield, Menu, X, Loader2 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import api from '@/lib/api';
 import { useStore } from '@/lib/store';
@@ -58,6 +58,7 @@ export default function DashboardLayout({
   const navItems = [
     { label: 'Complaints', href: '/dashboard', icon: Home },
     { label: 'Profile', href: '/dashboard/profile', icon: User },
+    { label: 'Settings', href: '/dashboard/settings', icon: Settings },
   ];
 
   return (

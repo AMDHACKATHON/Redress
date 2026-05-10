@@ -45,6 +45,61 @@ function tryParseJson(text: string): any | null {
   }
 }
 
+/**
+ * Pull a JSON action signal out of an agent reply, even if the LLM appended
+ * it after conversational prose. Returns the parsed JSON (if any) and the
+ * reply with the JSON block removed so the user never sees it.
+ */
+function extractJsonAction(text: string): { json: any | null; cleaned: string } {
+  if (!text) return { json: null, cleaned: '' };
+  const original = text;
+  const trimmed = text.trim();
+  if (!trimmed) return { json: null, cleaned: '' };
+
+  // 1. Fenced ```json { ... } ``` block
+  const fenceRegex = /```json\s*(\{[\s\S]*?\})\s*```/i;
+  const fenceMatch = trimmed.match(fenceRegex);
+  if (fenceMatch) {
+    try {
+      return {
+        json: JSON.parse(fenceMatch[1]),
+        cleaned: trimmed.replace(fenceRegex, '').trim(),
+      };
+    } catch {
+      // fall through
+    }
+  }
+
+  // 2. The whole reply is JSON
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      return { json: JSON.parse(trimmed), cleaned: '' };
+    } catch {
+      // fall through
+    }
+  }
+
+  // 3. JSON appended to prose — find the last balanced { ... } that parses
+  const lastOpen = trimmed.lastIndexOf('{');
+  const lastClose = trimmed.lastIndexOf('}');
+  if (lastOpen !== -1 && lastClose > lastOpen) {
+    const candidate = trimmed.slice(lastOpen, lastClose + 1);
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object' && 'action' in parsed) {
+        return {
+          json: parsed,
+          cleaned: trimmed.slice(0, lastOpen).trim(),
+        };
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  return { json: null, cleaned: original };
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userSession = await getSessionUser(req);
@@ -152,11 +207,17 @@ ${missingClause}
 Rules:
 1. Gather: the organization name, what happened, the country, the date, what outcome the user wants — plus the sender's mailing address if not already on file.
 2. Keep it tight: at most 3 short clarifying questions total. Combine related questions when possible.
-3. Once you have enough information, respond with EXACTLY this JSON object and nothing else:
+3. Once you have enough information AND no clarifying questions remain, respond with EXACTLY this JSON object and nothing else (no prose before or after):
 {"action": "ready_for_letter", "summary": "<one sentence summary of the complaint>", "complaint_type": "<bank|telco|utility|landlord|government|other>", "country": "<country name>", "sender_address": "<the user's mailing address if mentioned in the conversation, otherwise null>"}
 4. If the user says their complaint was ignored or rejected, respond with EXACTLY this JSON object and nothing else:
 {"action": "escalate"}
-5. For all other turns, reply in plain conversational English. Be empathetic, clear, professional. No markdown, no bullet points.`;
+5. For all other turns, reply in plain conversational English. Be empathetic, clear, professional. No markdown, no bullet points.
+
+CRITICAL OUTPUT RULES — read carefully:
+- Each reply MUST be EITHER plain conversational English OR a single JSON action object. NEVER both in the same reply.
+- If you are still asking the user any question (even a confirmation), reply with prose only and DO NOT include any JSON.
+- Only emit a JSON action when your reply contains zero questions and zero conversational text.
+- JSON signals are never wrapped in markdown code fences. They are raw JSON, alone.`;
     } else if (complaint.stage === 'draft') {
       const letterText = existingLetter?.letter || '(letter not yet generated)';
       systemPrompt = `You are Redress, the complaint resolution agent. The user's formal complaint letter has already been generated. Here it is:
@@ -182,7 +243,11 @@ B. Request EDITS to the letter (e.g. "make paragraph 3 sound more human", "short
 C. Say their complaint was ignored / they want to escalate to a regulator. When this happens, respond with EXACTLY this JSON object and nothing else:
 {"action": "escalate"}
 
-Only emit a JSON action when one of B or C clearly applies. Otherwise reply conversationally. Never wrap JSON in markdown — emit it as raw JSON, alone, when used.`;
+CRITICAL OUTPUT RULES — read carefully:
+- Each reply MUST be EITHER plain conversational English OR a single JSON action object. NEVER both in the same reply.
+- If you are answering a question or asking for clarification, reply with prose only — no JSON.
+- Only emit a JSON action when your reply contains zero questions and zero prose.
+- JSON signals are never wrapped in markdown code fences. They are raw JSON, alone.`;
     } else {
       systemPrompt = `You are Redress, the complaint resolution agent. An escalation letter has been sent to the regulator.
 
@@ -210,17 +275,23 @@ Answer the user's questions helpfully and conversationally. No JSON signals are 
       );
     }
 
-    // Try to detect a JSON action signal in the reply
-    const parsed = tryParseJson(agentReply);
+    // Detect a JSON action signal in the reply and strip it from the displayed text
+    const { json: parsed, cleaned: prose } = extractJsonAction(agentReply);
 
-    let displayReply = agentReply;
+    // If the model emitted prose AND a signal in the same turn, the prose usually
+    // contains a clarifying question — in that case we ignore the premature signal,
+    // show only the prose, and let the next user reply trigger the real signal.
+    const proseHasQuestion = /[?？]/.test(prose);
+    const honorAction = !!parsed?.action && !(parsed.action === 'ready_for_letter' && proseHasQuestion);
+
+    let displayReply = prose || agentReply;
     let stage = complaint.stage;
     let ready_for_letter = false;
     let action: string | null = null;
     let updatedLetter: any = null;
 
     const namePrefix = firstName ? `${firstName}, ` : '';
-    if (parsed?.action === 'ready_for_letter' && complaint.stage === 'understand') {
+    if (honorAction && parsed?.action === 'ready_for_letter' && complaint.stage === 'understand') {
       stage = 'draft';
       complaint.stage = 'draft';
       complaint.summary = parsed.summary || complaint.summary;
@@ -254,13 +325,13 @@ Answer the user's questions helpfully and conversationally. No JSON signals are 
       ready_for_letter = true;
       action = 'ready_for_letter';
       displayReply = `${namePrefix}I have everything I need. Click Generate Letter to get your formal complaint letter.`;
-    } else if (parsed?.action === 'escalate') {
+    } else if (honorAction && parsed?.action === 'escalate') {
       stage = 'escalate';
       complaint.stage = 'escalate';
       await complaint.save();
       action = 'escalate';
       displayReply = `Understood${firstName ? `, ${firstName}` : ''}. Click Escalate to Regulator to generate your escalation letter.`;
-    } else if (parsed?.action === 'edit_letter' && existingLetter) {
+    } else if (honorAction && parsed?.action === 'edit_letter' && existingLetter) {
       const instructions = (parsed.instructions || '').toString().trim() || 'improve the letter';
       const senderName = userSession.name || '';
       try {
@@ -319,8 +390,8 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
         console.error('Edit letter regen failed:', err);
         displayReply = "I couldn't apply that edit. Try rephrasing what you'd like changed.";
       }
-    } else if (parsed?.action) {
-      // Model emitted an action we couldn't act on — never expose raw JSON to the user
+    } else if (parsed?.action && !prose) {
+      // Model emitted an action we couldn't act on, with no prose — never expose raw JSON
       displayReply = "Got it. What would you like to do next?";
     }
 
