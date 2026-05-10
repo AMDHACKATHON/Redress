@@ -88,7 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'meta-llama/Llama-3.1-70B-Instruct',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: extractionPrompt },
             { role: 'user', content: messageContext }
@@ -149,7 +149,7 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'meta-llama/Llama-3.1-70B-Instruct',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Conversation history:\n${messageContext}` }

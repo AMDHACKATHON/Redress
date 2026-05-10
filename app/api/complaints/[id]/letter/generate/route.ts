@@ -7,7 +7,7 @@ import Letter from '@/lib/models/Letter';
 
 const AMD_API_URL = process.env.AMD_API_URL;
 const AMD_API_KEY = process.env.AMD_API_KEY;
-const MODEL = 'meta-llama/Llama-3.1-405B-Instruct';
+const MODEL = 'llama-3.3-70b-versatile';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,7 +51,7 @@ Return ONLY a JSON object in this format:
 Today's date: ${new Date().toLocaleDateString()}. Formal tone. Include response deadline of 14 days. Sign off as [Your Name].
 No markdown, no explanation. Pure JSON only.`;
 
-    const response = await fetch(`${AMD_API_URL}/chat/completions`, {
+    const response = await fetch(AMD_API_URL!, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -6,7 +6,7 @@ import Message from '@/lib/models/Message';
 
 const AMD_API_URL = process.env.AMD_API_URL;
 const AMD_API_KEY = process.env.AMD_API_KEY;
-const MODEL = 'meta-llama/Llama-3.1-405B-Instruct';
+const MODEL = 'llama-3.3-70b-versatile';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -73,7 +73,7 @@ Otherwise respond normally with no JSON block.`;
       ...history.map(m => ({ role: m.role, content: m.content }))
     ];
 
-    const response = await fetch(`${AMD_API_URL}/chat/completions`, {
+    const response = await fetch(AMD_API_URL!, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

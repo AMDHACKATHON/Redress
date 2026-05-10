@@ -97,7 +97,7 @@ Follow these rules strictly:
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'meta-llama/Llama-3.1-70B-Instruct',
+          model: 'llama-3.3-70b-versatile',
           messages: messagesArray,
           max_tokens: 1024,
           temperature: 0.7
