@@ -19,11 +19,9 @@ export default function LoginPage() {
     email: '',
     password: '',
   });
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     try {
@@ -34,15 +32,14 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
-        toast.error('Login failed');
+        toast.error('Invalid email or password');
       } else {
         toast.success('Welcome back to Redress!');
         router.push('/dashboard');
         router.refresh();
       }
     } catch (err: any) {
-      setError('An unexpected error occurred');
+      toast.error('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -129,13 +126,6 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-
-            {error && (
-              <div className="text-red-400 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20 flex items-start space-x-2">
-                <div className="w-1 h-1 rounded-full bg-red-400 mt-1.5 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
 
             <button
               type="submit"

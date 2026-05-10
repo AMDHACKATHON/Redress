@@ -32,7 +32,10 @@ export const authOptions: NextAuthOptions = {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
-          image: user.avatar,
+          // NOTE: never put `user.avatar` on the auth token — avatars are stored as
+          // base64 data URLs in MongoDB and would balloon the JWT cookie past
+          // Vercel's 8KB header limit (REQUEST_HEADER_TOO_LARGE / 494). Components
+          // load the avatar from /api/profile via the zustand store instead.
         };
       }
     })
@@ -62,27 +65,26 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
-        token.avatar = user.image;
+        // Deliberately NOT storing avatar on the token — see note in `authorize`.
       }
-      
-      // For Google users, refresh data from DB on each token update if needed,
-      // or at least ensure we have the DB ID instead of Google ID
+
+      // Ensure we have the canonical DB id on the token (especially for Google sign-in
+      // which initially gives us the Google account id). Avatar/country are NOT stored
+      // here to keep the JWT cookie small — they're fetched from /api/profile client-side.
       if (account?.provider === 'google' || !token.id) {
-          await connectDB();
-          const dbUser = await User.findOne({ email: token.email });
-          if (dbUser) {
-            token.id = dbUser._id.toString();
-            token.avatar = dbUser.avatar;
-            token.country = dbUser.country;
-          }
+        await connectDB();
+        const dbUser = await User.findOne({ email: token.email });
+        if (dbUser) {
+          token.id = dbUser._id.toString();
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
-        (session.user as any).image = token.avatar || session.user.image;
-        (session.user as any).country = token.country;
+        // Do NOT copy avatar/country into the session. Heavy/changing fields belong
+        // in the user record fetched via /api/profile, not in the cookie.
       }
       return session;
     }

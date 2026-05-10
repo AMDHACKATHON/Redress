@@ -22,7 +22,6 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   });
-  const [error, setError] = useState<string | null>(null);
 
   const passwordChecks = [
     { label: 'At least 8 characters', valid: formData.password.length >= 8 },
@@ -31,10 +30,9 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
 
@@ -66,7 +64,7 @@ export default function RegisterPage() {
         err.response?.data?.detail ||
         err.response?.data?.error ||
         'Registration failed. Please try again.';
-      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -217,13 +215,6 @@ export default function RegisterPage() {
                     </span>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {error && (
-              <div className="text-red-400 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20 flex items-start space-x-2">
-                <div className="w-1 h-1 rounded-full bg-red-400 mt-1.5 shrink-0" />
-                <span>{error}</span>
               </div>
             )}
 

@@ -77,7 +77,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Extract country, sector, and company; then search the web in parallel for
     // (a) the relevant regulatory body and (b) the company's public complaint email.
     let searchResults = '';
-    let companyContactResults = '';
+    let companyContactSnippets = '';
+    let candidateEmails: string[] = [];
     try {
       const extractionPrompt = `Based on this complaint conversation, extract three fields and respond ONLY with valid JSON, nothing else:
 {
@@ -114,10 +115,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             : Promise.resolve(''),
           extracted.company
             ? searchCompanyContact(extracted.company, extracted.country)
-            : Promise.resolve(''),
+            : Promise.resolve({ snippets: '', candidateEmails: [] as string[] }),
         ]);
         searchResults = regulator;
-        companyContactResults = companyContact;
+        companyContactSnippets = companyContact.snippets;
+        candidateEmails = companyContact.candidateEmails;
       }
     } catch (e) {
       console.error('Extraction/Search failed, proceeding without it:', e);
@@ -186,16 +188,22 @@ ${searchResults}
 
 Use this information to ensure the regulator name, contact details, and filing channel are accurate.` : ''}
 
-${companyContactResults ? `Company contact information from web search (use this to populate "recipient_contact"):
-${companyContactResults}
+${candidateEmails.length > 0 ? `Verified email candidates extracted from live web search results for this company (ranked by likely relevance):
+${candidateEmails.map((e, i) => `${i + 1}. ${e}`).join('\n')}
 
-Extract the most reliable customer service / complaints email address from these snippets. Look for an actual email pattern (something@company.tld). If multiple appear, prefer the one most clearly labeled as customer service, support, complaints, or contact. If none of the snippets contain a clear email, return null.` : ''}
+Web search snippets the candidates were drawn from (for context):
+${companyContactSnippets}
+
+Choose ONE of the candidate emails above for "recipient_contact" — pick the one most clearly meant for customer service, complaints, or general support. Use the email exactly as it appears in the list above (verbatim, lowercase).` : companyContactSnippets ? `Web search snippets for this company:
+${companyContactSnippets}
+
+No clear customer-service email was extracted from these snippets. Set "recipient_contact" to null.` : `No web search results were available for this company. Set "recipient_contact" to null.`}
 
 Respond ONLY with a valid JSON object in this exact format and nothing else:
 {
   "letter": "full letter text here",
   "recipient": "Customer Service Manager, [Organization]",
-  "recipient_contact": "<a real customer-service email extracted from the company contact snippets above, or one you are highly confident about; otherwise null>",
+  "recipient_contact": ${candidateEmails.length > 0 ? `"<one of the candidate emails listed above, verbatim — or null if none of them look right>"` : `null`},
   "channel": "email",
   "regulator": {
     "name": "regulator name",
@@ -204,10 +212,10 @@ Respond ONLY with a valid JSON object in this exact format and nothing else:
   }
 }
 
-For "recipient_contact":
-- Strongly prefer an email taken directly from the company contact snippets above.
-- If no email appears in the snippets and you are not highly confident, return null.
-- NEVER invent, guess, or fabricate an email address. Returning null is better than guessing.`;
+STRICT RULE FOR "recipient_contact":
+- The value MUST be either null or one of the verified email candidates listed above.
+- NEVER invent, guess, paraphrase, or modify an email address. Do not derive an email from a company name (e.g. "company name → support@company.com" is FORBIDDEN unless that exact address appears in the candidate list).
+- When in doubt, return null. A missing email is far better than a wrong one.`;
 
     let aiResponseContent = '';
     try {
@@ -254,18 +262,25 @@ For "recipient_contact":
     const recipientContact = (() => {
       const v = parsedLetter.recipient_contact;
       if (!v || typeof v !== 'string') return null;
-      const trimmed = v.trim();
+      const trimmed = v.trim().toLowerCase();
       if (!trimmed || /^null$/i.test(trimmed)) return null;
       // Reject obviously invalid email shapes
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
-      // Anti-fabrication: if we have search snippets but the email isn't in them,
-      // null it out — the model likely guessed.
-      if (companyContactResults) {
-        const haystack = companyContactResults.toLowerCase();
-        if (!haystack.includes(trimmed.toLowerCase())) {
-          console.warn('recipient_contact not in search snippets, dropping:', trimmed);
-          return null;
-        }
+      // Hard anti-fabrication: the email MUST be one of the candidates we extracted
+      // directly from web search results. Anything else means the LLM invented it.
+      if (candidateEmails.length === 0) {
+        console.warn('No candidate emails available, dropping LLM email:', trimmed);
+        return null;
+      }
+      const verified = candidateEmails.some((c) => c.toLowerCase() === trimmed);
+      if (!verified) {
+        console.warn(
+          'recipient_contact does not match any candidate, dropping:',
+          trimmed,
+          'candidates:',
+          candidateEmails
+        );
+        return null;
       }
       return trimmed;
     })();
